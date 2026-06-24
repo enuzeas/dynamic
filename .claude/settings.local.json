@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(PLUGIN_ROOT=\"$PLUGIN_ROOT\" node *)",
+      "Bash(node *)",
+      "Bash(python3 -c ' *)"
+    ]
+  }
+}

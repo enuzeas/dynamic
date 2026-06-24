@@ -1,0 +1,8 @@
+.vercel
+.understand-anything
+.venv
+__pycache__/
+.DS_Store
+*.MOV
+*.mov
+*.task

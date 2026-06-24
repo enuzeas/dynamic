@@ -1,0 +1,10 @@
+*.MOV
+*.mov
+*.task
+__pycache__
+.venv
+*.py
+*.m
+doc/
+mvp.html
+analysis_output.png

@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BIO-IP — Dynamic Layer MVP</title>
+<style>
+  /* ─── tokens ─── */
+  :root {
+    --ground:    #EEF1F6;
+    --surface:   #FFFFFF;
+    --hero-bg:   #060D1F;
+    --text:      #0D1428;
+    --text-dim:  #5B6878;
+    --accent:    #00C4A0;
+    --accent-2:  #3B72E8;
+    --person-a:  #4B8BF4;
+    --person-b:  #F5A623;
+    --border:    #C9D0DC;
+    --serif:     Georgia, 'Times New Roman', serif;
+    --sans:      system-ui, -apple-system, 'Helvetica Neue', sans-serif;
+    --mono:      'Courier New', Courier, monospace;
+    --col:       860px;
+  }
+
+  /* ─── reset ─── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--ground);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ─── hero ─── */
+  .hero {
+    background: #F8F5EE;
+    color: #1C1916;
+    padding: 80px 24px 64px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-inner {
+    max-width: var(--col);
+    margin: 0 auto;
+    position: relative;
+    min-height: 360px;
+    display: flex;
+    align-items: center;
+  }
+  @media (max-width: 640px) {
+    .hero-image-wrap { display: none; }
+  }
+  .hero-eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 20px;
+  }
+  .hero h1 {
+    font-family: var(--serif);
+    font-size: clamp(32px, 6vw, 56px);
+    font-weight: normal;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    margin-bottom: 20px;
+    color: #111111;
+  }
+  .hero h1 em {
+    font-style: italic;
+    color: var(--accent);
+  }
+  .hero-sub {
+    font-size: 16px;
+    color: #4A5568;
+    max-width: 560px;
+    line-height: 1.65;
+  }
+  .hero-text {
+    position: relative;
+    z-index: 2;
+    max-width: 520px;
+  }
+  .hero-image-wrap {
+    position: absolute;
+    right: -24px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+    pointer-events: none;
+  }
+  .hero-image-wrap img {
+    width: 420px;
+    display: block;
+    opacity: 0.92;
+  }
+  #wave-canvas {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    opacity: 0.08;
+    pointer-events: none;
+  }
+
+  /* ─── glossary ─── */
+  .glossary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin: 24px 0;
+  }
+  @media (max-width: 600px) { .glossary-grid { grid-template-columns: 1fr; } }
+  .glossary-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 16px 20px;
+  }
+  .glossary-card .g-term {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: bold;
+    color: var(--accent-2);
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+  }
+  .glossary-card .g-en {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+  .glossary-card .g-def {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.55;
+  }
+
+  /* ─── nav strip ─── */
+  .nav-strip {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .nav-strip-inner {
+    max-width: var(--col);
+    margin: 0 auto;
+    padding: 0 24px;
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+  }
+  .nav-strip a {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    text-decoration: none;
+    padding: 14px 16px 12px;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .nav-strip a:hover {
+    color: var(--text);
+    border-bottom-color: var(--accent);
+  }
+
+  /* ─── page wrapper ─── */
+  .page {
+    max-width: var(--col);
+    margin: 0 auto;
+    padding: 0 24px 80px;
+  }
+
+  /* ─── section ─── */
+  .section {
+    padding-top: 64px;
+  }
+  .section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+  .section h2 {
+    font-family: var(--serif);
+    font-size: 26px;
+    font-weight: normal;
+    letter-spacing: -0.01em;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section p {
+    color: var(--text);
+    margin-bottom: 16px;
+    max-width: 720px;
+  }
+  .section p + p {
+    margin-top: 0;
+  }
+
+  /* ─── definition card ─── */
+  .def-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: 4px;
+    padding: 24px 28px;
+    margin: 24px 0;
+  }
+  .def-card .term {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .def-card p {
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 1.7;
+    max-width: 100%;
+    color: var(--text);
+    margin: 0;
+  }
+
+  /* ─── layer comparison table ─── */
+  .layer-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 24px 0;
+    font-size: 14px;
+  }
+  .layer-table th {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    text-align: left;
+    padding: 10px 16px;
+    border-bottom: 2px solid var(--border);
+    background: var(--ground);
+  }
+  .layer-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .layer-table tr:last-child td { border-bottom: none; }
+  .layer-table tr.highlight td {
+    background: #F0FBF8;
+    font-weight: 500;
+  }
+  .layer-table tr.highlight td:first-child {
+    border-left: 3px solid var(--accent);
+  }
+  .tag-red {
+    display: inline-block;
+    background: #FEE2E2;
+    color: #991B1B;
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 2px;
+    letter-spacing: 0.05em;
+  }
+  .tag-green {
+    display: inline-block;
+    background: #D1FAF0;
+    color: #065F46;
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 2px;
+    letter-spacing: 0.05em;
+  }
+
+  /* ─── signal table ─── */
+  .signal-group {
+    margin: 28px 0;
+  }
+  .signal-group-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+  }
+  .signal-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  @media (max-width: 600px) {
+    .signal-grid { grid-template-columns: 1fr; }
+  }
+  .signal-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 16px 20px;
+  }
+  .signal-card .sig-name {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: bold;
+    color: var(--accent-2);
+    margin-bottom: 4px;
+  }
+  .signal-card .sig-formula {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+  .signal-card .sig-desc {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.5;
+  }
+
+  /* ─── theorem box ─── */
+  .theorem-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 36px 40px;
+    margin: 32px 0;
+    position: relative;
+  }
+  .theorem-block::before {
+    content: 'THEOREM';
+    position: absolute;
+    top: -1px; left: 32px;
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.25em;
+    background: var(--surface);
+    padding: 0 8px;
+    color: var(--text-dim);
+    transform: translateY(-50%);
+  }
+  .theorem-number {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+  }
+  .theorem-statement {
+    font-family: var(--serif);
+    font-size: 18px;
+    line-height: 1.8;
+    color: var(--text);
+    padding-bottom: 20px;
+    border-bottom: 1px dashed var(--border);
+    margin-bottom: 20px;
+  }
+  .theorem-statement strong {
+    font-style: italic;
+  }
+  .proof-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 12px;
+  }
+  .proof-steps {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .proof-steps li {
+    display: flex;
+    gap: 16px;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .proof-steps li .step-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    min-width: 24px;
+    padding-top: 2px;
+  }
+  .proof-qed {
+    text-align: right;
+    font-size: 20px;
+    color: var(--text-dim);
+    margin-top: 16px;
+  }
+
+  /* ─── condition boxes ─── */
+  .conditions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 24px 0;
+  }
+  @media (max-width: 580px) {
+    .conditions { grid-template-columns: 1fr; }
+  }
+  .condition-card {
+    padding: 20px 24px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+  .condition-card.uniqueness {
+    border-top: 3px solid var(--person-a);
+  }
+  .condition-card.homeostasis {
+    border-top: 3px solid var(--person-b);
+  }
+  .condition-card .cond-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .condition-card.uniqueness .cond-label { color: var(--person-a); }
+  .condition-card.homeostasis .cond-label { color: var(--person-b); }
+  .condition-card .cond-title {
+    font-family: var(--serif);
+    font-size: 16px;
+    margin-bottom: 8px;
+  }
+  .condition-card .cond-body {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.55;
+  }
+  .condition-card .cond-metric {
+    font-family: var(--mono);
+    font-size: 11px;
+    background: var(--ground);
+    padding: 6px 10px;
+    border-radius: 2px;
+    margin-top: 12px;
+    color: var(--text);
+  }
+
+  /* ─── video section ─── */
+  .video-intro {
+    margin-bottom: 24px;
+    font-size: 14px;
+    color: var(--text-dim);
+    max-width: 680px;
+  }
+  .video-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 640px) {
+    .video-grid { grid-template-columns: 1fr; }
+  }
+  .video-col-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .person-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .person-dot.a { background: var(--person-a); }
+  .person-dot.b { background: var(--person-b); }
+  .video-col-header .person-name {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    color: var(--text);
+  }
+  .video-col-header .person-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-left: auto;
+  }
+  .video-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .video-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .video-item video {
+    width: 100%;
+    display: block;
+    max-height: 240px;
+    object-fit: contain;
+    background: #000;
+  }
+  .video-caption {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    padding: 6px 10px;
+    letter-spacing: 0.08em;
+    border-top: 1px solid var(--border);
+    background: var(--ground);
+  }
+
+  /* ─── analysis section ─── */
+  .analysis-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 28px;
+  }
+  .analysis-img-wrap {
+    background: #0B1220;
+    padding: 16px;
+    overflow-x: auto;
+  }
+  .analysis-img-wrap img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 0 auto;
+  }
+  .analysis-body {
+    padding: 24px 28px;
+  }
+  .analysis-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .analysis-body h3 {
+    font-family: var(--serif);
+    font-size: 19px;
+    font-weight: normal;
+    margin-bottom: 14px;
+    color: var(--text);
+  }
+  .analysis-body p {
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.7;
+    margin-bottom: 12px;
+    max-width: 100%;
+  }
+  .metric-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .metric-pill {
+    background: var(--ground);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 8px 14px;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  .metric-pill .mpk {
+    color: var(--text-dim);
+    font-size: 10px;
+    display: block;
+    margin-bottom: 2px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .metric-pill .mpv {
+    color: var(--text);
+    font-weight: bold;
+  }
+  .metric-pill.good .mpv { color: #065F46; }
+  .metric-pill.warn .mpv { color: #92400E; }
+
+  .finding-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 12px 0;
+  }
+  .finding-list li {
+    font-size: 13px;
+    color: var(--text);
+    padding-left: 18px;
+    position: relative;
+    line-height: 1.6;
+  }
+  .finding-list li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-family: var(--mono);
+  }
+
+  .caveat-box {
+    background: #FFFBEB;
+    border: 1px solid #FDE68A;
+    border-radius: 3px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: #78350F;
+    margin-top: 16px;
+    line-height: 1.6;
+  }
+  .caveat-box strong {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 4px;
+    color: #92400E;
+  }
+
+  /* ─── footer ─── */
+  .footer {
+    border-top: 1px solid var(--border);
+    padding: 32px 24px;
+    text-align: center;
+    max-width: var(--col);
+    margin: 0 auto;
+  }
+  .footer p {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+  }
+
+  /* ─── motion preference ─── */
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════ HERO ══════════════ -->
+<header class="hero">
+  <canvas id="wave-canvas" height="120"></canvas>
+  <div class="hero-inner">
+    <div class="hero-text">
+      <p class="hero-eyebrow">BIO-IP &nbsp;·&nbsp; Dynamic Layer &nbsp;·&nbsp; MVP Demo</p>
+      <h1>움직임 안에 숨겨진<br><em>개인 서명</em></h1>
+      <p class="hero-sub">
+        같은 동작을 해도 사람마다 속도·타이밍·리듬이 다르다.
+        그 차이는 딥페이크로 복제되지 않는 유일한 생체 신호다.
+      </p>
+    </div>
+    <div class="hero-image-wrap">
+      <img src="https://dynamic-navy-alpha.vercel.app/Background.png" alt="움직임의 개인 서명 — 선 드로잉">
+    </div>
+  </div>
+</header>
+
+<!-- ══════════════ NAV ══════════════ -->
+<nav class="nav-strip" aria-label="페이지 섹션">
+  <div class="nav-strip-inner">
+    <a href="#proposition">핵심 주장</a>
+    <a href="#def-layer">움직임 특성</a>
+    <a href="#def-signal">움직임 데이터</a>
+    <a href="#demo-video">데모 영상</a>
+    <a href="#analysis">실험 결과</a>
+    <a href="#conclusion">결론</a>
+    <a href="#glossary">용어 해설</a>
+  </div>
+</nav>
+
+<main class="page">
+
+<!-- ══════════════ §1 제1 명제 ══════════════ -->
+<section class="section" id="proposition">
+  <p class="section-label">핵심 주장</p>
+  <h2>움직임 서명은 사람마다 다르고, 같은 사람은 반복해도 같다</h2>
+
+  <div class="theorem-block">
+    <p class="theorem-number">핵심 주장</p>
+    <p class="theorem-statement">
+      같은 동작을 하더라도, 사람마다 속도·타이밍·리듬이 다르다.
+      그리고 같은 사람이 같은 동작을 반복하면
+      <strong>매번 비슷한 패턴이 나타난다</strong>.
+      즉, 움직임은 지문처럼 개인을 식별할 수 있는 고유한 서명이다.
+    </p>
+
+    <p class="proof-label">검증 방법</p>
+    <ol class="proof-steps">
+      <li>
+        <span class="step-num">P1</span>
+        <span>
+          <strong>동작 통일.</strong> 세 참가자(A, B, C)가 같은 동작(팔 들어올리기)을 각각 3번 반복한다.
+          동작이 같으므로 남는 차이는 오직 개인 스타일뿐이다.
+        </span>
+      </li>
+      <li>
+        <span class="step-num">P2</span>
+        <span>
+          <strong>데이터 추출.</strong> AI가 영상에서 손목·팔꿈치·어깨의 매 순간 위치를 읽고 속도 변화 그래프를 만든다.
+        </span>
+      </li>
+      <li>
+        <span class="step-num">P3</span>
+        <span>
+          <strong>구별력 검증.</strong> AI가 9개 영상의 속도 패턴을 서로 비교해 &ldquo;가장 닮은 영상이 같은 사람인가?&rdquo;를 테스트한다.
+        </span>
+      </li>
+      <li>
+        <span class="step-num">P4</span>
+        <span>
+          <strong>일관성 검증.</strong> 같은 사람이 3번 반복한 속도 그래프가 얼마나 비슷하게 겹치는지 수치로 측정한다.
+        </span>
+      </li>
+      <li>
+        <span class="step-num">P5</span>
+        <span>
+          두 조건이 모두 성립하면:
+          <em>움직임은 지문처럼 개인 고유 자산이다</em>.
+          외형만 복제해도 움직임 패턴은 재현 불가능하므로 독립적인 보호 가치가 생긴다.
+        </span>
+      </li>
+    </ol>
+    <p class="proof-qed">□</p>
+  </div>
+
+  <div class="conditions">
+    <div class="condition-card uniqueness">
+      <p class="cond-label">조건 A — 사람마다 달라야 한다</p>
+      <p class="cond-title">서로 다른 사람은 패턴이 다르다</p>
+      <p class="cond-body">
+        A·B·C 세 사람의 속도 패턴이 서로 얼마나 다른지 AI로 비교한다.
+        다른 사람끼리 차이가 클수록 구별이 잘 된다.
+      </p>
+      <p class="cond-metric">검증 지표: AI 정답률 · 오류율</p>
+    </div>
+    <div class="condition-card homeostasis">
+      <p class="cond-label">조건 B — 같은 사람은 반복해도 같아야 한다</p>
+      <p class="cond-title">3번 해도 비슷한 패턴이 나온다</p>
+      <p class="cond-body">
+        같은 사람이 같은 동작을 여러 번 해도 속도 패턴이 비슷하게 나와야
+        서명으로 쓸 수 있다. 매번 달라지면 개인 특성이 아니라 그냥 무작위다.
+      </p>
+      <p class="cond-metric">검증 지표: 반복 일치 점수(ICC) · 반복 상관(r)</p>
+    </div>
+  </div>
+
+  <p>
+    두 조건이 동시에 성립하면 움직임 패턴은
+    <strong>개인 고유 자산 — 움직임 저작권</strong>으로 정의할 수 있으며,
+    법적·기술적 보호 체계가 필요해진다.
+    이 데모는 그 가능성을 처음으로 시각화한 예비 증거다.
+  </p>
+</section>
+
+<!-- ══════════════ §2 다이나믹 레이어 정의 ══════════════ -->
+<section class="section" id="def-layer">
+  <p class="section-label">개념 01</p>
+  <h2>움직임 특성 (Dynamic Layer)</h2>
+
+  <div class="def-card">
+    <p class="term">한 마디로</p>
+    <p>
+      같은 동작을 해도 사람마다 <em>빠르기·타이밍·끊김의 패턴</em>이 다르다.
+      <strong>무엇을 하는가(동작 내용)</strong>가 아니라
+      <strong>어떻게 하는가(개인 스타일)</strong>를 기록한다.
+    </p>
+  </div>
+
+  <p>
+    얼굴과 목소리는 딥페이크·AI 음성 합성으로 쉽게 복제된다.
+    그러나 수십 년간 몸에 배인 움직임 습관 — 팔을 드는 속도, 멈추는 방식,
+    다음 동작으로 넘어가는 리듬 — 은 의식적으로 따라 하기 극히 어렵다.
+  </p>
+
+  <p>
+    인간의 자연스러운 움직임은 '가장 부드러운 경로'를 무의식적으로 선택한다.
+    이 <em>부드러움의 방식</em>이 사람마다 다르다 — 뇌와 근육이 평생 학습한
+    고유한 패턴이 반영되기 때문이다.
+  </p>
+
+  <table class="layer-table">
+    <thead>
+      <tr>
+        <th>레이어</th>
+        <th>포착 대상</th>
+        <th>복제 가능성</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>시각 레이어</td>
+        <td>얼굴·외형·몸짓</td>
+        <td><span class="tag-red">복제 가능</span> &nbsp;딥페이크, AI 영상 합성</td>
+      </tr>
+      <tr>
+        <td>음성 레이어</td>
+        <td>음색·목소리</td>
+        <td><span class="tag-red">복제 가능</span> &nbsp;AI 목소리 합성</td>
+      </tr>
+      <tr class="highlight">
+        <td><strong>움직임 특성</strong></td>
+        <td>동작 방식 — 속도·타이밍·리듬</td>
+        <td><span class="tag-green">복제 불가</span> &nbsp;몸에 배인 습관에 내재</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    댄서들이 "합이 맞는다/안 맞는다"고 말하는 감각,
+    댄스에서 "그루브"라 부르는 것, 연기에서 "호흡"이라 부르는 것이
+    정확히 이 다이나믹스 레이어의 개인차를 인간이 직관적으로 감지하는 현상이다.
+  </p>
+</section>
+
+<div class="page">
+  <div class="def-card">
+    <p class="term">Quote</p>
+    <p>"움직임은 위조할 수 없는 서명이다"</p>
+  </div>
+</div>
+
+<!-- ══════════════ §2 운동학적 신호 정의 ══════════════ -->
+<section class="section" id="def-signal">
+  <p class="section-label">개념 02</p>
+  <h2>움직임 데이터 — AI가 읽는 것들</h2>
+
+  <p>
+    AI가 영상에서 신체 관절(손목·팔꿈치·어깨 등) 위치를 매 프레임 읽고,
+    아래 네 가지 움직임 특성을 계산한다. 개인 서명이 가장 잘 드러나는 부위는 손목이다.
+  </p>
+
+  <div class="signal-group">
+    <p class="signal-group-title">기본 움직임 특성</p>
+    <div class="signal-grid">
+      <div class="signal-card">
+        <p class="sig-name">속도</p>
+        <p class="sig-formula">얼마나 빨리 움직이나</p>
+        <p class="sig-desc">관절이 움직이는 빠르기. 매 순간의 속도 변화가 개인 패턴을 담는다.</p>
+      </div>
+      <div class="signal-card">
+        <p class="sig-name">가속도</p>
+        <p class="sig-formula">얼마나 빨리 빨라지나</p>
+        <p class="sig-desc">속도가 변하는 속도. 동작을 "치고 나가는" 느낌을 수치로 잡는다.</p>
+      </div>
+      <div class="signal-card">
+        <p class="sig-name">끊김·부드러움</p>
+        <p class="sig-formula">동작이 매끄러운가, 끊기는가</p>
+        <p class="sig-desc">가속도가 변하는 방식. 누군가의 동작이 "툭툭 끊긴다", "물 흐르듯 부드럽다"는 느낌이 여기서 나온다.</p>
+      </div>
+      <div class="signal-card">
+        <p class="sig-name">궤적 모양</p>
+        <p class="sig-formula">직선으로 가나, 곡선으로 가나</p>
+        <p class="sig-desc">관절이 그리는 경로의 휨 정도. 손을 들 때 직선으로 올리는지 호를 그리는지가 사람마다 다르다.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="signal-group">
+    <p class="signal-group-title">타이밍 특성</p>
+    <div class="signal-grid">
+      <div class="signal-card">
+        <p class="sig-name">최고 속도 타이밍</p>
+        <p class="sig-formula">가장 빠른 순간이 언제인가</p>
+        <p class="sig-desc">동작 중 가장 빠른 순간의 위치. 0.01초 단위의 미세한 개인 차이가 누적된다.</p>
+      </div>
+      <div class="signal-card">
+        <p class="sig-name">멈춤 시간</p>
+        <p class="sig-formula">동작 사이에 얼마나 쉬나</p>
+        <p class="sig-desc">동작과 동작 사이의 정지 구간 길이. 연기에서 "호흡"이라 부르는 것이 여기에 해당한다.</p>
+      </div>
+      <div class="signal-card">
+        <p class="sig-name">전환 타이밍</p>
+        <p class="sig-formula">다음 동작으로 언제 넘어가나</p>
+        <p class="sig-desc">한 동작을 마치고 다음 동작을 시작하는 타이밍. 개인 서명이 가장 강하게 드러나는 구간.</p>
+      </div>
+      <div class="signal-card">
+        <p class="sig-name">리듬 주기</p>
+        <p class="sig-formula">반복 동작의 박자가 얼마나 일정한가</p>
+        <p class="sig-desc">같은 동작을 반복할 때의 박자 일관성. 무의식적인 호흡과 미세 떨림도 여기에 담긴다.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="def-card" style="border-left-color: var(--accent-2); margin-top: 12px;">
+    <p class="term" style="color: var(--accent-2);">"사이의 퍼포먼스"</p>
+    <p style="font-size:15px;">
+      개인 서명의 핵심은 동작 그 자체가 아니라
+      <strong>동작과 동작 사이</strong>에 있다.
+      다음 동작으로 넘어가는 타이밍과 속도 변화가 그 사람만의 고유한 패턴을 담는다.
+    </p>
+  </div>
+</section>
+
+<!-- ══════════════ §4 데모 영상 ══════════════ -->
+<section class="section" id="demo-video">
+  <p class="section-label">실험 데이터</p>
+  <h2>같은 동작, 다른 사람 — A·B·C 비교 영상</h2>
+
+  <p class="video-intro">
+    세 참가자(이한성·송필순·박세준)가 같은 동작(팔 들어올리기)을 각각 3번 촬영했다.
+    같은 사람의 3번은 비슷해 보여야 하고, 세 사람 사이엔 차이가 보여야 한다.
+  </p>
+
+  <div class="video-grid">
+    <!-- Person A -->
+    <div>
+      <div class="video-col-header">
+        <span class="person-dot a"></span>
+        <span class="person-name">A · 이한성</span>
+        <span class="person-tag">3회 촬영</span>
+      </div>
+      <div class="video-stack">
+        <div class="video-item">
+          <video controls preload="metadata" src="https://dynamic-navy-alpha.vercel.app/sample/compressed/A_1.mp4"></video>
+          <p class="video-caption">이한성 — 1번째</p>
+        </div>
+        <div class="video-item">
+          <video controls preload="metadata" src="https://dynamic-navy-alpha.vercel.app/sample/compressed/A_2.mp4"></video>
+          <p class="video-caption">이한성 — 2번째</p>
+        </div>
+        <div class="video-item">
+          <video controls preload="metadata" src="https://dynamic-navy-alpha.vercel.app/sample/compressed/A_3.mp4"></video>
+          <p class="video-caption">이한성 — 3번째</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Person B -->
+    <div>
+      <div class="video-col-header">
+        <span class="person-dot b"></span>
+        <span class="person-name">B · 송필순</span>
+        <span class="person-tag">3회 촬영</span>
+      </div>
+      <div class="video-stack">
+        <div class="video-item">
+          <video controls preload="metadata" src="https://dynamic-navy-alpha.vercel.app/sample/compressed/B_1.mp4"></video>
+          <p class="video-caption">송필순 — 1번째</p>
+        </div>
+        <div class="video-item">
+          <video controls preload="metadata" src="https://dynamic-navy-alpha.vercel.app/sample/compressed/B_2.mp4"></video>
+          <p class="video-caption">송필순 — 2번째</p>
+        </div>
+        <div class="video-item">
+          <video controls preload="metadata" src="https://dynamic-navy-alpha.vercel.app/sample/compressed/B_3.mp4"></video>
+          <p class="video-caption">송필순 — 3번째</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Person C -->
+    <div>
+      <div class="video-col-header">
+        <span class="person-dot" style="background: #2E9E5B;"></span>
+        <span class="person-name">C · 박세준</span>
+        <span class="person-tag">3회 촬영</span>
+      </div>
+      <div class="video-stack">
+        <div class="video-item">
+          <video controls preload="metadata" src="https://dynamic-navy-alpha.vercel.app/sample/compressed/C_1.mp4"></video>
+          <p class="video-caption">박세준 — 1번째</p>
+        </div>
+        <div class="video-item">
+          <video controls preload="metadata" src="https://dynamic-navy-alpha.vercel.app/sample/compressed/C_2.mp4"></video>
+          <p class="video-caption">박세준 — 2번째</p>
+        </div>
+        <div class="video-item">
+          <video controls preload="metadata" src="https://dynamic-navy-alpha.vercel.app/sample/compressed/C_3.mp4"></video>
+          <p class="video-caption">박세준 — 3번째</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ §5 분석 결과 ══════════════ -->
+<section class="section" id="analysis">
+  <p class="section-label">분석 결과</p>
+  <h2>분석 결과 — 세 가지 그래프 해설</h2>
+
+  <!-- demo_output.png -->
+  <div class="analysis-block">
+    <div class="analysis-img-wrap">
+      <img src="https://dynamic-navy-alpha.vercel.app/demo_output.png" alt="다이나믹스 서명 비교 — 오른손목 속도 곡선" loading="lazy">
+    </div>
+    <div class="analysis-body">
+      <p class="analysis-title">demo_output.png</p>
+      <h3>속도 변화 그래프 — 세 사람의 움직임 패턴 비교</h3>
+
+      <p>
+        오른쪽 손목의 매 순간 속도를 그래프로 그린 것이다.
+        위쪽 세 칸은 각 참가자(이한성·송필순·박세준)의 3번 반복 곡선이고,
+        아래 큰 칸은 세 사람의 평균 곡선을 겹쳐 비교한 것이다.
+      </p>
+
+      <ul class="finding-list">
+        <li>아래 비교 그래프에서 이한성(파랑)·송필순(주황)·박세준(초록)의 속도 곡선이 서로 다른 모양이다. 가장 빠른 순간의 위치, 올라가는 기울기, 내려오는 방식이 세 사람 사이에 뚜렷하게 다르다.</li>
+        <li>세 사람 모두 처음에는 느리다가 급격히 빨라지는 공통 패턴이 있어, 동작 내용은 같음을 확인할 수 있다.</li>
+        <li>같은 사람의 3번 반복이 완전히 겹치지 않는 이유는 매 반복의 시작 타이밍이 조금씩 달라서다 — 이는 아래 일관성 분석에서 별도로 다룬다.</li>
+      </ul>
+
+      <div class="caveat-box">
+        <strong>참고</strong>
+        현재 그래프는 각 반복의 시작 타이밍을 맞추지 않은 원본 데이터다.
+        아래 일관성 분석에서는 시작점을 정렬한 후 다시 측정했다.
+        이 그래프는 세 사람의 패턴이 <em>방향적으로 다르다</em>는 것을 보여주는 초기 증거다.
+      </div>
+    </div>
+  </div>
+
+  <!-- Figure_1.png -->
+  <div class="analysis-block">
+    <div class="analysis-img-wrap">
+      <img src="https://dynamic-navy-alpha.vercel.app/Figure_1.png" alt="BIO-IP 다이나믹스 서명 검증 — DTW 거리 행렬, 거리 분포, FAR/FRR" loading="lazy">
+    </div>
+    <div class="analysis-body">
+      <p class="analysis-title">Figure_1.png</p>
+      <h3>AI 구별력 검증 — 패턴 비교표 · 거리 분포 · 정확도 곡선</h3>
+
+      <p>
+        이한성·송필순·박세준 각 3번씩 총 9개 영상의 속도 패턴을 AI가 서로 비교해
+        얼마나 잘 구별하는지 시각화한 결과다.
+      </p>
+
+      <div class="metric-row">
+        <div class="metric-pill warn">
+          <span class="mpk">AI 정답률</span>
+          <span class="mpv">77.8 %</span>
+        </div>
+        <div class="metric-pill bad">
+          <span class="mpk">오류율</span>
+          <span class="mpv">33.3 %</span>
+        </div>
+        <div class="metric-pill">
+          <span class="mpk">같은 사람 패턴 차이</span>
+          <span class="mpv">229.1</span>
+        </div>
+        <div class="metric-pill">
+          <span class="mpk">다른 사람 패턴 차이</span>
+          <span class="mpv">299.5</span>
+        </div>
+      </div>
+
+      <ul class="finding-list">
+        <li><strong>패턴 비교표</strong>에서 같은 사람끼리는 차이가 작고, 다른 사람끼리는 차이가 크게 나타나는 경향이 있다. 이는 &ldquo;움직임으로 사람을 구별할 수 있다&rdquo;는 핵심 주장과 방향이 일치한다.</li>
+        <li><strong>AI 정답률 77.8%</strong>: 9개 영상 중 7개에서 &ldquo;가장 닮은 영상이 같은 사람&rdquo;을 맞혔다. 3명 구별은 2명보다 어렵기 때문에 이전 실험(100%)보다 낮아진 것이다.</li>
+        <li><strong>오류율 33.3%</strong>: 같은 사람/다른 사람 패턴이 아직 완전히 분리되지 않는다. 영상이 9개뿐인 극히 작은 실험이라는 한계이며, 참가자를 늘리면 크게 개선될 것으로 예상한다.</li>
+        <li>같은 사람 패턴 차이(229.1)가 다른 사람 패턴 차이(299.5)보다 작아, 방향성은 핵심 주장과 일치한다.</li>
+      </ul>
+
+      <div class="caveat-box">
+        <strong>한계</strong>
+        9개 영상이라는 매우 작은 실험이다.
+        &ldquo;가능성 확인&rdquo; 수준의 예비 결과이며, 정식 검증을 위해서는
+        참가자 8–12명, 1인당 5번 반복 데이터가 필요하다.
+      </div>
+    </div>
+  </div>
+
+  <!-- homeostasis_matlab.png -->
+  <div class="analysis-block">
+    <div class="analysis-img-wrap">
+      <img src="https://dynamic-navy-alpha.vercel.app/homeostasis_matlab.png" alt="항상성 검증 — ICC와 반복 유사도" loading="lazy">
+    </div>
+    <div class="analysis-body">
+      <p class="analysis-title">homeostasis_matlab.png</p>
+      <h3>일관성 검증 — 같은 사람이 반복하면 얼마나 비슷한가</h3>
+
+      <p>
+        같은 사람이 같은 동작을 3번 반복할 때 속도 곡선이 얼마나 비슷하게 나오는지를
+        두 가지 점수로 측정한 그래프다. 높을수록 일관성이 좋다 (최고 1.0).
+      </p>
+
+      <div class="metric-row">
+        <div class="metric-pill warn">
+          <span class="mpk">이한성 — 일치 점수</span>
+          <span class="mpv">0.000</span>
+        </div>
+        <div class="metric-pill warn">
+          <span class="mpk">이한성 — 반복 상관</span>
+          <span class="mpv">−0.114</span>
+        </div>
+        <div class="metric-pill warn">
+          <span class="mpk">송필순 — 일치 점수</span>
+          <span class="mpv">0.192</span>
+        </div>
+        <div class="metric-pill warn">
+          <span class="mpk">송필순 — 반복 상관</span>
+          <span class="mpv">0.190</span>
+        </div>
+        <div class="metric-pill good">
+          <span class="mpk">박세준 — 일치 점수</span>
+          <span class="mpv">0.518</span>
+        </div>
+        <div class="metric-pill good">
+          <span class="mpk">박세준 — 반복 상관</span>
+          <span class="mpv">0.541</span>
+        </div>
+        <div class="metric-pill">
+          <span class="mpk">최소 기준선</span>
+          <span class="mpv">0.50</span>
+        </div>
+      </div>
+
+      <ul class="finding-list">
+        <li><strong>박세준</strong>은 시작점을 맞추고 나니 일치 점수 0.518로 기준선(0.50)을 통과했다. 시작점 정렬 전(0.06)보다 8배 이상 좋아진 결과다.</li>
+        <li><strong>이한성</strong>(0.000)과 <strong>송필순</strong>(0.192)은 정렬 후에도 기준선에 못 미친다. 3번의 반복에서 동작 방식이 조금씩 달라진 것으로 추정된다.</li>
+        <li>AI 정답률(77.8%)과 일관성 점수가 동시에 낮을 수 있는 이유: AI는 시간 순서가 맞지 않아도 패턴을 찾아내지만, 일관성 점수는 타이밍이 정확히 맞아야 높아진다.</li>
+      </ul>
+
+      <div class="caveat-box">
+        <strong>다음 단계</strong>
+        이한성·송필순의 일관성을 높이려면 동작 시작 신호를 통일하고(예: 비프음에 맞춰 시작),
+        동작 속도와 범위를 맞추는 것이 필요하다.
+        참가자를 8명 이상으로 늘려야 통계적으로 믿을 수 있는 결과가 나온다.
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<!-- ══════════════ §6 결론 ══════════════ -->
+<section class="section" id="conclusion">
+  <p class="section-label">결론 · BIO IP PLAY</p>
+  <h2>너의 움직임은, 너의 것이야</h2>
+
+  <p>
+    얼굴에는 초상권이 있고, 목소리에는 퍼블리시티권이 생기고 있다.
+    미국 ELVIS Act(2024), 덴마크 신체 저작권법(2025), SAG-AFTRA 268일 파업 —
+    세상은 조금씩 빗장을 걸기 시작했다.
+    그런데 <strong>춤·움직임·호흡 타이밍</strong>은 아직 무방비다.
+    포트나이트 판결이 증명했듯, 누구나 알아보는 시그니처 동작도 현행법은 보호하지 못한다.
+  </p>
+
+  <p>
+    이 데모는 그 공백을 데이터로 채우려는 첫 번째 시도다.
+    세 참가자(이한성·송필순·박세준)의 팔 들어올리기 9개 영상에서,
+    AI는 같은 동작 안에 <em>사람마다 다른 속도·타이밍·끊김 패턴</em>이 존재함을 확인했다.
+  </p>
+
+  <div class="conditions" style="margin: 28px 0;">
+    <div class="condition-card uniqueness">
+      <p class="cond-label">신호 확인 — 사람마다 패턴이 다르다</p>
+      <p class="cond-title">AI 정답률 77.8 % &nbsp;·&nbsp; Rank-1</p>
+      <p class="cond-body">
+        손목 속도 하나만으로 7/9 구별 성공.
+        같은 사람 패턴 차이(229)가 다른 사람 차이(300)보다 작아 방향성이 성립한다.
+        단일 특징, 스마트폰 영상, 하루 실험의 결과다.
+      </p>
+    </div>
+    <div class="condition-card homeostasis">
+      <p class="cond-label">부분 확인 — 같은 사람은 반복해도 비슷하다</p>
+      <p class="cond-title">박세준 일치 점수 0.52 (기준선 통과)</p>
+      <p class="cond-body">
+        동작 시작점 정렬 후 박세준은 기준선을 넘었다.
+        조건 통일(메트로놈·조명·가이드)과 다관절+저크 특징 결합으로
+        전체 EER &lt; 5% 달성이 3개월 목표다.
+      </p>
+    </div>
+  </div>
+
+  <div class="def-card" style="border-left-color: var(--accent-2);">
+    <p class="term" style="color: var(--accent-2);">원천 특허 · 제10-2026-0059825호</p>
+    <p>
+      "연기 데이터 기반 Bio-IP 생성, 상태값 기반 자산화, 추적 및 콘텐츠 합성 시스템 및 방법" —
+      시그니처 추출·인증 방법부터 콘텐츠 합성·추적까지 선출원 완료.
+      이 MVP 데이터는 해당 특허의 <strong>실증 데이터</strong>로 기능한다.
+    </p>
+  </div>
+
+  <div class="theorem-block" style="margin-top: 32px;">
+    <p class="theorem-number">24개월 로드맵</p>
+    <ol class="proof-steps">
+      <li>
+        <span class="step-num">M0–3</span>
+        <span><strong>검증 단계.</strong> 참가자 2명 → 50명, 동작 1종 → 5종, EER 13.9% → &lt;5%. 메트로놈·조명 통제로 실험 조건 표준화.</span>
+      </li>
+      <li>
+        <span class="step-num">M3–6</span>
+        <span><strong>첫 매출 단계.</strong> Bio-IP Motion Pack 3종 제작, 게임사·버튜버 에이전시 유료 PoC 3건. 창작자 20명 온보딩.</span>
+      </li>
+      <li>
+        <span class="step-num">M6–12</span>
+        <span><strong>마켓 베타.</strong> K-챌린지 → 시그니처 등록 → 라이선스 판매 플로우 가동. 창작자 100명, 시그니처 500개.</span>
+      </li>
+      <li>
+        <span class="step-num">M12–24</span>
+        <span><strong>Registry 인프라.</strong> 동작 출처·동의·라이선스 증명 API. AI 기업·엔터프라이즈 5–10곳 계약. Series A.</span>
+      </li>
+    </ol>
+    <p class="proof-qed">→</p>
+  </div>
+
+  <table class="layer-table" style="margin-top: 28px;">
+    <thead>
+      <tr>
+        <th>확장 영역</th>
+        <th>어디에 쓰이나</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>🎬 실사 영화 · VFX</td>
+        <td>배우의 호흡 타이밍이 CGI 캐릭터에 그대로 이식 — "사람이 들어가 있는 듯한" 장면</td>
+      </tr>
+      <tr>
+        <td>🎨 K-웹툰 · 애니메이션</td>
+        <td>댄서의 춤선·연기 연속성이 캐릭터에 매핑 — 신과 신 사이가 자연스럽게 이어짐</td>
+      </tr>
+      <tr class="highlight">
+        <td>🤖 휴머노이드 로봇</td>
+        <td>로봇 응대 동작에 사람의 결을 이식 — "불쾌한 골짜기"를 데이터로 해소</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p style="margin-top: 40px; font-size: 20px; font-family: var(--serif); font-style: italic; color: var(--text); border-left: 3px solid var(--accent); padding-left: 20px;">
+    "같은 안무를 100명이 춰도, 100개의 다른 곡선이 나온다."<br>
+    <span style="font-size: 14px; color: var(--text-dim); font-style: normal;">— BIO IP PLAY · DEMO DAY 2026</span>
+  </p>
+</section>
+
+<!-- ══════════════ §7 용어 해설 ══════════════ -->
+<section class="section" id="glossary">
+  <p class="section-label">용어 해설</p>
+  <h2>Glossary</h2>
+
+  <div class="glossary-grid">
+    <div class="glossary-card">
+      <p class="g-term">BIO-IP</p>
+      <p class="g-en">Biometric Intellectual Property</p>
+      <p class="g-def">신체 동작에서 추출한 개인 고유의 운동 패턴을 지적재산으로 정의하는 개념. 얼굴·목소리에 이어 <em>움직임</em>을 보호 가능한 생체 자산으로 확장한다.</p>
+    </div>
+    <div class="glossary-card">
+      <p class="g-term">다이나믹 레이어</p>
+      <p class="g-en">Dynamic Layer</p>
+      <p class="g-def">BIO-IP의 핵심 특징 공간. 동작의 <em>무엇(콘텐츠)</em>이 아니라 <em>어떻게(스타일)</em> — 속도·타이밍·리듬·가속 패턴 — 을 기록한다.</p>
+    </div>
+    <div class="glossary-card">
+      <p class="g-term">DTW</p>
+      <p class="g-en">Dynamic Time Warping</p>
+      <p class="g-def">길이나 속도가 다른 두 시계열을 탄력적으로 정렬해 유사도를 측정하는 알고리즘. 사람마다 동작 속도가 달라도 패턴 비교가 가능하다.</p>
+    </div>
+    <div class="glossary-card">
+      <p class="g-term">FAR / FRR</p>
+      <p class="g-en">False Accept Rate / False Reject Rate</p>
+      <p class="g-def">FAR은 타인을 본인으로 잘못 통과시키는 비율, FRR은 본인을 타인으로 잘못 거부하는 비율. 임계값을 낮추면 FAR↑ FRR↓, 높이면 반대.</p>
+    </div>
+    <div class="glossary-card">
+      <p class="g-term">EER</p>
+      <p class="g-en">Equal Error Rate</p>
+      <p class="g-def">FAR = FRR이 되는 지점의 오류율. 시스템 인식 성능을 단일 수치로 요약하는 표준 지표. 낮을수록 좋다 (현재 MVP 목표: &lt;5%).</p>
+    </div>
+    <div class="glossary-card">
+      <p class="g-term">항상성</p>
+      <p class="g-en">Homeostasis / Within-person Consistency</p>
+      <p class="g-def">같은 사람이 동일 동작을 반복할 때 패턴이 얼마나 일관되는지. 항상성이 높아야 서명으로 쓸 수 있다. 본인 내 DTW 거리로 측정.</p>
+    </div>
+    <div class="glossary-card">
+      <p class="g-term">저크</p>
+      <p class="g-en">Jerk</p>
+      <p class="g-def">가속도의 시간 변화율 (d³x/dt³). 동작의 끊김·날카로움·매끄러움을 표현하며, 숙련도나 개인 스타일 차이를 포착하는 데 유효하다.</p>
+    </div>
+    <div class="glossary-card">
+      <p class="g-term">Rank-1 Accuracy</p>
+      <p class="g-en">Leave-one-out 식별 정확도</p>
+      <p class="g-def">각 영상에서 가장 DTW 거리가 가까운 영상이 같은 사람인 비율. 현재 MVP: 7/9 = 77.8%. 특징·관절 수를 늘릴수록 향상 가능.</p>
+    </div>
+    <div class="glossary-card">
+      <p class="g-term">운동학적 신호</p>
+      <p class="g-en">Kinematic Signals</p>
+      <p class="g-def">관절 좌표를 시간 미분해 얻는 속도·가속도·저크·궤적 곡률. MediaPipe Pose가 추출한 33개 관절 시계열이 원천 데이터다.</p>
+    </div>
+    <div class="glossary-card">
+      <p class="g-term">MediaPipe Pose</p>
+      <p class="g-en">Google 관절 추출 모델</p>
+      <p class="g-def">영상 한 프레임에서 33개 신체 관절 좌표를 실시간으로 추출하는 Google의 AI 모델. 별도 마커 없이 RGB 카메라만으로 동작한다.</p>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="footer">
+  <p>BIO-IP &nbsp;·&nbsp; Dynamic Layer MVP &nbsp;·&nbsp; Preliminary Demo &nbsp;·&nbsp; 2026</p>
+</footer>
+
+<script>
+// ── waveform canvas animation ──────────────────────────────────────────────
+(function() {
+  var canvas = document.getElementById('wave-canvas');
+  if (!canvas) return;
+
+  function resize() {
+    canvas.width  = canvas.offsetWidth;
+    canvas.height = 120;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  var t = 0;
+  function draw() {
+    var w = canvas.width, h = canvas.height;
+    var ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, w, h);
+
+    var pts = 300;
+    // Person A — stable, tight wave
+    ctx.beginPath();
+    ctx.strokeStyle = '#4B8BF4';
+    ctx.lineWidth = 1.5;
+    for (var i = 0; i < pts; i++) {
+      var x = (i / pts) * w;
+      var progress = i / pts;
+      var amp = 18 * Math.sin(progress * Math.PI);  // envelope
+      var freq = 6 + 2 * progress;
+      var y = h * 0.42 + amp * Math.sin(freq * progress * Math.PI * 2 + t * 0.8);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Person B — diverging, different rhythm
+    ctx.beginPath();
+    ctx.strokeStyle = '#F5A623';
+    ctx.lineWidth = 1.5;
+    for (var i = 0; i < pts; i++) {
+      var x = (i / pts) * w;
+      var progress = i / pts;
+      var diverge = progress * progress * 28;
+      var amp = 14 * Math.sin(progress * Math.PI) + diverge * 0.3;
+      var freq = 7.5 + 1.5 * progress;
+      var phase = t * 0.7 + 1.1;
+      var y = h * 0.58 - amp * Math.sin(freq * progress * Math.PI * 2 + phase);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    t += 0.018;
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+</script>
+</body>
+</html>
