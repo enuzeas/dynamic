@@ -19,51 +19,11 @@ import matplotlib
 matplotlib.use("Agg")
 matplotlib.rcParams['font.family'] = 'AppleGothic'
 matplotlib.rcParams['axes.unicode_minus'] = False
-import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
-# 관절 인덱스: MediaPipe Pose
-JOINTS = {
-    "오른손목": 16,
-    "오른팔꿈치": 14,
-    "오른어깨": 12,
-}
-
-
-def extract_dynamics(video_path: str) -> dict[str, np.ndarray]:
-    """영상 → 동작 속도 시계열 반환."""
-    cap = cv2.VideoCapture(video_path)
-    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
-    speeds = []
-    prev = None
-
-    # ponytail: whole-frame flow; restore pose landmarks when MediaPipe works headlessly.
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        gray = cv2.resize(gray, (160, 90))
-        if prev is not None:
-            flow = cv2.calcOpticalFlowFarneback(prev, gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
-            speeds.append(np.linalg.norm(flow, axis=2).mean() * fps)
-        prev = gray
-    cap.release()
-
-    if len(speeds) < 5:
-        raise ValueError(f"동작 추출 실패: {video_path}")
-
-    dynamics = {}
-    speed = np.array(speeds)
-    jerk = np.abs(np.diff(speed) * fps)
-    for joint in JOINTS:
-        dynamics[joint] = {
-            "speed": speed,
-            "jerk":  jerk,
-        }
-    return dynamics
+from pose_extract import extract_joint_dynamics as extract_dynamics
 
 
 def normalize_length(arrays: list[np.ndarray]) -> list[np.ndarray]:

@@ -86,6 +86,19 @@ def rank1_accuracy(D, labels):
 
 # ── EER ──────────────────────────────────────────────────
 
+def sweep_far_frr(genuine, impostor, n=500):
+    """threshold를 거리 전 범위로 스윕해 (thresholds, far, frr)를 반환한다.
+    EER 계산과 Dynamic ID 임계값 보정(dynamic_id.py) 양쪽에서 공용으로 쓴다."""
+    thresholds = np.linspace(
+        min(genuine.min(), impostor.min()),
+        max(genuine.max(), impostor.max()),
+        n
+    )
+    far_arr = np.array([(impostor <= t).mean() for t in thresholds])  # 다른 사람인데 통과
+    frr_arr = np.array([(genuine  >  t).mean() for t in thresholds])  # 같은 사람인데 거부
+    return thresholds, far_arr, frr_arr
+
+
 def compute_eer(D, labels):
     """
     genuine scores  : 같은 사람 쌍의 DTW 거리 (작을수록 좋음)
@@ -101,21 +114,7 @@ def compute_eer(D, labels):
     genuine  = np.array(genuine)
     impostor = np.array(impostor)
 
-    # threshold를 DTW 거리 전 범위로 스윕
-    thresholds = np.linspace(
-        min(genuine.min(), impostor.min()),
-        max(genuine.max(), impostor.max()),
-        500
-    )
-    far_arr, frr_arr = [], []
-    for t in thresholds:
-        far = (impostor <= t).mean()   # 다른 사람인데 통과 (거리가 작으면 같다고 판단)
-        frr = (genuine  >  t).mean()   # 같은 사람인데 거부
-        far_arr.append(far)
-        frr_arr.append(frr)
-
-    far_arr = np.array(far_arr)
-    frr_arr = np.array(frr_arr)
+    thresholds, far_arr, frr_arr = sweep_far_frr(genuine, impostor)
     idx = np.argmin(np.abs(far_arr - frr_arr))
     eer = (far_arr[idx] + frr_arr[idx]) / 2
 
