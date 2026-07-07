@@ -74,6 +74,23 @@
 
 ---
 
+## G. 미세 움직임 포착 (Subtle / Micro-Movement Capture)
+
+"작은 관절·작은 동작이 신호로서 의미가 있는가"에 답하기 위해 찾은 논문들.
+
+| # | 논문 | 저널/출처 | 핵심 |
+|---|---|---|---|
+| G1 | Wu, H.-Y. et al. (2012). **Eulerian Video Magnification for Revealing Subtle Changes in the World.** | *ACM TOG* (SIGGRAPH 2012) — [PDF](https://people.csail.mit.edu/mrub/papers/vidmag.pdf) | 육안으로 안 보이는 미세한 색상·움직임 변화(맥박, 호흡)를 시공간 필터링으로 증폭. `dynamics_layer.md`의 "호흡 미세 흔들림" 신호를 실제로 뽑아내는 데 쓸 수 있는 원천 기법. |
+| G2 | Cornman, H.L., Stenum, J., Roemmich, R.T. (2021). **Video-based quantification of human movement frequency using pose estimation: A pilot study.** | *PLoS One* 16(12) | OpenPose로 손가락 태핑 등 반복 소동작 5종의 주파수를 측정 — 이벤트 타이밍은 r>0.99로 정확했으나, 표본 10명·모션캡처 대조군 없음이 한계. monocular pose estimation이 손가락 수준 소동작을 어디까지 신뢰성 있게 잡는지에 대한 직접적 파일럿 증거. |
+| G3 | Gionfrida, L., Rusli, W.M.R., Bharath, A.A., Kedgley, A.E. (2022). **Validation of two-dimensional video-based inference of finger kinematics with pose estimation.** | *PLOS ONE* 17(11):e0276799 | OpenPose 손가락 keypoint를 마커 기반 모션캡처(골드 스탠다드)와 정량 대조. 단안 카메라 기반 손가락 kinematics 추정의 정확도 한계를 수치로 제시 — 관절 확장 시 어느 정도 오차를 감수해야 하는지 참고. |
+| G4 | Liu, X. et al. (2021). **iMiGUE: An Identity-free Video Dataset for Micro-Gesture Understanding and Emotion Analysis.** | *CVPR 2021* — [arXiv:2107.00285](https://arxiv.org/abs/2107.00285) | 무의식적 소동작(micro-gesture)만으로 감정을 분석하되 얼굴·신원 정보는 의도적으로 배제("identity-free"). 소동작을 신원과 분리 가능한 것으로 설계한 전제가, BIO-IP의 "다이내믹스=개인 고유 신원 신호"라는 주장과 정반대 방향이라 비교 검토할 가치가 있음. |
+| G5 | Chen, H. et al. (2023). **SMG: A Micro-gesture Dataset Towards Spontaneous Body Gestures for Emotional Stress State Analysis.** | *IJCV* (FG 2019 확장판) | 저강도 자발적 소동작을 Kinect 골격 데이터(4모달리티)로 캡처해 심리적 스트레스 상태와의 상관관계를 분석. 소동작에서 골격 기반 특징을 뽑는 파이프라인 설계 참고용. |
+| G6 | Guo, D. et al. (2024). **Benchmarking Micro-action Recognition: Dataset, Methods, and Applications.** (MA-52) | [arXiv:2403.05234](https://arxiv.org/abs/2403.05234), *IEEE TCSVT* | 심리 인터뷰에서 전신 소동작(손-몸통, 머리-손, 다리 상호작용 포함)을 대규모(22K 샘플)로 수집. 손목 이하 국소 관절이 아니라 신체 부위 간 상호작용 단위로 "작은 동작"을 정의하는 관점 — 관절 선택 논의에 참고. |
+
+**정리**: G2·G3는 "손가락 단위 소동작도 근접 촬영·통제된 조건이면 pose estimation으로 꽤 정확히 잡힌다"는 증거지만, 둘 다 손을 화면 가까이 크게 잡은 임상/실험 세팅이다. 지금 프로젝트의 전신 댄스 챌린지 촬영 거리에서는 이 정확도가 그대로 옮겨오지 않는다 — G1(Eulerian magnification)이 오히려 "먼 거리에서도 미세 신호를 증폭해서 잡는" 대안 기법으로 더 맞을 수 있음. G4·G6은 소동작을 다루는 기존 연구들이 대부분 감정·심리 분석 목적이라 "신원 식별"이 아닌 다른 각도에서 소동작을 본다는 점도 유의.
+
+---
+
 ## 우선순위 요약
 
 | 우선도 | 논문 | 이유 |

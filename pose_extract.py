@@ -15,12 +15,20 @@ from mediapipe.tasks.python import BaseOptions, vision
 from scipy.signal import savgol_filter
 
 MODEL_PATH = Path(__file__).parent / "models" / "pose_landmarker_lite.task"
+HAND_MODEL_PATH = Path(__file__).parent / "models" / "hand_landmarker.task"
 
-# MediaPipe Pose 33 랜드마크 인덱스 중 다이내믹스 서명이 잘 드러나는 오른팔 관절
+# MediaPipe Pose 33 랜드마크 인덱스 중 다이내믹스 서명이 잘 드러나는 관절 —
+# scope.md MVP 스펙(6~8개, 다관절 결합)에 맞춰 양팔 + 양쪽 골반으로 확장.
+# dynamics_layer.md의 "댄스·안무 핵심 관절: 손목·팔꿈치·어깨·골반"과 일치.
 LANDMARK_INDEX = {
     "오른손목": 16,
     "오른팔꿈치": 14,
     "오른어깨": 12,
+    "왼손목": 15,
+    "왼팔꿈치": 13,
+    "왼어깨": 11,
+    "오른엉덩이": 24,
+    "왼엉덩이": 23,
 }
 
 _SMOOTH_WINDOW = 7  # ponytail: 고정 윈도우. fps·촬영거리 편차가 크면 조정 필요
@@ -94,3 +102,77 @@ def extract_joint_dynamics(
         jerk = np.abs(np.gradient(accel) * fps)
         dynamics[j] = {"speed": speed, "accel": accel, "jerk": jerk}
     return dynamics
+
+
+INDEX_FINGERTIP = 8  # MediaPipe Hand의 21개 랜드마크 중 검지 끝 — 몸 관절보다 훨씬 작음
+
+
+def _make_hand_landmarker() -> vision.HandLandmarker:
+    options = vision.HandLandmarkerOptions(
+        base_options=BaseOptions(model_asset_path=str(HAND_MODEL_PATH)),
+        running_mode=vision.RunningMode.VIDEO,
+        num_hands=2,
+    )
+    return vision.HandLandmarker.create_from_options(options)
+
+
+def probe_hand_reliability(video_path: str, handedness: str = "Right") -> dict:
+    """전신 촬영 거리에서 손가락 keypoint가 얼마나 믿을 만한지 진단한다.
+
+    같은 영상의 오른손목(몸 관절, 이미 파이프라인에 있음) 검출 떨림과 나란히 비교해
+    "손가락을 추가할 가치가 있는가"를 판단하는 근거로 쓴다 — papers.md G2/G3가
+    지적한 근접 촬영 vs 전신 촬영 정확도 차이가 이 프로젝트 데이터에서도 나타나는지 확인.
+    """
+    cap = cv2.VideoCapture(video_path)
+    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+    w = cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 1.0
+    h = cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 1.0
+    diag = (w ** 2 + h ** 2) ** 0.5
+
+    pose_landmarker = _make_landmarker()
+    hand_landmarker = _make_hand_landmarker()
+    total = 0
+    hand_positions: list[tuple[float, float]] = []
+    wrist_positions: list[tuple[float, float]] = []
+    try:
+        frame_i = 0
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+            ts_ms = int((frame_i / fps) * 1000)
+            total += 1
+
+            hand_result = hand_landmarker.detect_for_video(mp_image, ts_ms)
+            fingertip = None
+            for hand, handed in zip(hand_result.hand_landmarks, hand_result.handedness):
+                if handed[0].category_name == handedness:
+                    fingertip = hand[INDEX_FINGERTIP]
+                    break
+            if fingertip is not None:
+                hand_positions.append((fingertip.x * w / diag, fingertip.y * h / diag))
+
+            pose_result = pose_landmarker.detect_for_video(mp_image, ts_ms)
+            if pose_result.pose_landmarks:
+                p = pose_result.pose_landmarks[0][LANDMARK_INDEX["오른손목"]]
+                wrist_positions.append((p.x * w / diag, p.y * h / diag))
+
+            frame_i += 1
+    finally:
+        cap.release()
+        pose_landmarker.close()
+        hand_landmarker.close()
+
+    def jitter(positions: list[tuple[float, float]]) -> float:
+        arr = np.array(positions)
+        return float(np.linalg.norm(np.diff(arr, axis=0), axis=1).mean()) if len(arr) > 1 else float("nan")
+
+    return {
+        "total_frames": total,
+        "hand_detection_rate": len(hand_positions) / total if total else 0.0,
+        "hand_frame_to_frame_jitter": jitter(hand_positions),
+        "wrist_detection_rate": len(wrist_positions) / total if total else 0.0,
+        "wrist_frame_to_frame_jitter": jitter(wrist_positions),
+    }

@@ -32,9 +32,10 @@ def normalize_length(arrays: list[np.ndarray]) -> list[np.ndarray]:
     return [a[:min_len] for a in arrays]
 
 
-def trim_motion(speed: np.ndarray, threshold: float = 0.08, pad: int = 3) -> np.ndarray:
-    """움직임 구간만 남긴다."""
-    moving = np.flatnonzero(speed > threshold)
+def trim_motion(speed: np.ndarray, threshold: float = 0.15, pad: int = 3) -> np.ndarray:
+    """움직임 구간만 남긴다. threshold는 절대값이 아니라 이 시계열 최고 속도 대비 비율(0~1) —
+    MediaPipe 정규화 좌표 기반 속도는 영상마다 스케일이 다르므로 절대 threshold는 못 쓴다."""
+    moving = np.flatnonzero(speed > threshold * speed.max())
     if len(moving) == 0:
         return speed
     start = max(0, moving[0] - pad)
@@ -42,7 +43,7 @@ def trim_motion(speed: np.ndarray, threshold: float = 0.08, pad: int = 3) -> np.
     return speed[start:end]
 
 
-def plot_comparison(files_list, names, out="demo_output.png", threshold=0.08):
+def plot_comparison(files_list, names, out="demo_output.png", threshold=0.15):
     joint = "오른손목"
     palette = [
         ["#2E5FC2", "#4A7FE0", "#6A9FF8"],
@@ -113,7 +114,7 @@ if __name__ == "__main__":
     parser.add_argument("--c", nargs="+", default=None)
     parser.add_argument("--names", nargs="+", default=["Person A", "Person B", "Person C"])
     parser.add_argument("--out", default="demo_output.png")
-    parser.add_argument("--threshold", type=float, default=0.08)
+    parser.add_argument("--threshold", type=float, default=0.15, help="최고 속도 대비 비율 (0~1)")
     args = parser.parse_args()
 
     files_list = [args.a, args.b]

@@ -23,7 +23,7 @@ from analyze import dtw
 from demo import trim_motion
 from pose_extract import extract_joint_dynamics
 
-JOINT = "오른손목"
+JOINTS = ("오른손목", "오른팔꿈치", "오른어깨")
 
 # 파일명(크리에이터 핸들 기반) -> 표시 라벨. 영상 자체에 공개돼 있는 이름/핸들만 쓴다.
 LABELS = {
@@ -38,21 +38,23 @@ LABELS = {
 
 def main() -> None:
     files = sorted(Path("sample_dance").glob("*"))
-    speeds: dict[str, np.ndarray] = {}
+    speeds: dict[str, dict[str, np.ndarray]] = {}
     for f in files:
         label = LABELS.get(f.name, f.stem)
         print(f"추출 중: {label} ({f.name})")
-        dyn = extract_joint_dynamics(str(f), joints=(JOINT,))
-        speeds[label] = trim_motion(dyn[JOINT]["speed"])
-        print(f"  -> {len(speeds[label])}프레임 (움직임 구간)")
+        dyn = extract_joint_dynamics(str(f), joints=JOINTS)
+        speeds[label] = {j: trim_motion(dyn[j]["speed"]) for j in JOINTS}
+        lengths = ", ".join(f"{j}:{len(speeds[label][j])}" for j in JOINTS)
+        print(f"  -> {lengths} (움직임 구간, 관절별)")
 
     labels = list(speeds)
     n = len(labels)
     D = np.zeros((n, n))
     for i in range(n):
         for j in range(i + 1, n):
-            d = dtw(speeds[labels[i]], speeds[labels[j]])
-            D[i, j] = D[j, i] = d
+            # dynamic_id.py의 _distance_to_id와 동일한 방식 — 관절별 DTW 거리의 평균
+            per_joint = [dtw(speeds[labels[i]][jt], speeds[labels[j]][jt]) for jt in JOINTS]
+            D[i, j] = D[j, i] = float(np.mean(per_joint))
 
     off_diag = D[np.triu_indices(n, k=1)]
     print(f"\n쌍별 DTW 거리 — min {off_diag.min():.1f} / mean {off_diag.mean():.1f} / max {off_diag.max():.1f}")
@@ -81,7 +83,7 @@ def main() -> None:
     ax.set_xticklabels(labels, rotation=45, ha="right", fontsize=8, color="#D4DEEE")
     ax.set_yticks(range(n))
     ax.set_yticklabels(labels, fontsize=8, color="#D4DEEE")
-    ax.set_title("킥드럼 챌린지 6인 — 오른손목 속도 DTW 거리", color="#D4DEEE", pad=10)
+    ax.set_title("킥드럼 챌린지 6인 — 3관절(손목·팔꿈치·어깨) 평균 DTW 거리", color="#D4DEEE", pad=10)
     fig.colorbar(im, ax=ax, shrink=0.85)
     plt.savefig("sample_dance_dtw.png", dpi=150, bbox_inches="tight", facecolor="#080A10")
     print("\n저장 완료: sample_dance_dtw.png")
