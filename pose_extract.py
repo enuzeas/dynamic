@@ -52,6 +52,9 @@ def extract_joint_dynamics(
     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
     w = cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 1.0
     h = cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 1.0
+    # 프레임 대각선으로 정규화 — 해상도가 다른 영상끼리 픽셀 속도를 비교 가능하게 만든다.
+    # (예: 3840x2160 영상은 1080x1920 영상보다 같은 동작에서도 픽셀 이동량이 커진다)
+    diag = (w ** 2 + h ** 2) ** 0.5
 
     landmarker = _make_landmarker()
     positions: dict[str, list[tuple[float, float]]] = {j: [] for j in joints}
@@ -69,7 +72,7 @@ def extract_joint_dynamics(
             for j in joints:
                 if landmarks is not None:
                     p = landmarks[LANDMARK_INDEX[j]]
-                    positions[j].append((p.x * w, p.y * h))
+                    positions[j].append((p.x * w / diag, p.y * h / diag))
                 elif positions[j]:
                     positions[j].append(positions[j][-1])  # 검출 실패 프레임은 직전 위치 유지
                 else:
