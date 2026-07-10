@@ -8,3 +8,9 @@ __pycache__/
 *.task
 registry/
 sample_dance/
+sample_dance_apple/
+sample_dance_apt/
+sample_dance_apt_hiviews/
+sample_dance_golden/
+sample_dance_takemeup/
+sample_dance_takemeup_full/

@@ -1,4 +1,4 @@
-"""유튜브 쇼츠 킥드럼(베이스) 챌린지 커버댄스 6개 — 같은 안무, 다른 사람 비교.
+"""유튜브 쇼츠 킥드럼(베이스) 챌린지 커버댄스 11개 — 같은 안무, 다른 사람 비교.
 
 sample_dance/ 폴더의 영상들은 전부 같은 챌린지 안무(주먹 들어올리는 동작 포함)를
 서로 다른 크리에이터가 각자 촬영해 올린 것들이다. groupdance.md가 말한
@@ -33,6 +33,11 @@ LABELS = {
     "fitness_fitnessmotivation_50-(1920p30).mp4": "fitness_50",
     "kickdrum_challenge_dance_sura_queenbee_yunamong-(1920p60).mp4": "sura_B(스튜디오)",
     "shorts-(3840p30).webm": "shorts_unknown",
+    "4wTpIazbp-U-Kick Drum Bass 🔊.webm": "3인_기타드럼밈",
+    "DkARMCiaoQ4-Queen Bee Kick Drum Bass Dance Cover.webm": "2인_커버(마스크)",
+    "nE8KxiBU4Us-Kick drum bass 🥰💃#dance #masakakidsafricana #short.webm": "masaka_kids_africana",
+    "sF9W3Gcte-o-Kick drum bass 🥁.webm": "3인_한옥마당",
+    "xaRc8xzkHhw-가은이가 추는 Kick drum bass~Kick Kick drum base~🦵🥁🎸 #da.webm": "가은",
 }
 
 
@@ -57,16 +62,16 @@ def main() -> None:
             D[i, j] = D[j, i] = float(np.mean(per_joint))
 
     off_diag = D[np.triu_indices(n, k=1)]
-    print(f"\n쌍별 DTW 거리 — min {off_diag.min():.1f} / mean {off_diag.mean():.1f} / max {off_diag.max():.1f}")
+    print(f"\n쌍별 DTW 거리 — min {off_diag.min():.4f} / mean {off_diag.mean():.4f} / max {off_diag.max():.4f}")
 
     pairs = [(labels[i], labels[j], D[i, j]) for i in range(n) for j in range(i + 1, n)]
     pairs.sort(key=lambda p: p[2])
     print("\n가장 가까운 3쌍 (구별이 가장 어려운 쌍):")
     for a, b, d in pairs[:3]:
-        print(f"  {a} <-> {b} : {d:.1f}")
+        print(f"  {a} <-> {b} : {d:.4f}")
     print("가장 먼 3쌍 (가장 뚜렷하게 다른 쌍):")
     for a, b, d in pairs[-3:]:
-        print(f"  {a} <-> {b} : {d:.1f}")
+        print(f"  {a} <-> {b} : {d:.4f}")
 
     sura_pair = next(
         (p for p in pairs if any("sura_A" in x for x in (p[0], p[1])) and any("sura_B" in x for x in (p[0], p[1]))),
@@ -74,7 +79,7 @@ def main() -> None:
     )
     if sura_pair:
         rank = pairs.index(sura_pair) + 1
-        print(f"\nsura_A <-> sura_B 거리: {sura_pair[2]:.1f} (전체 {len(pairs)}쌍 중 {rank}번째로 가까움)")
+        print(f"\nsura_A <-> sura_B 거리: {sura_pair[2]:.4f} (전체 {len(pairs)}쌍 중 {rank}번째로 가까움)")
 
     fig, ax = plt.subplots(figsize=(7, 6), facecolor="#080A10")
     ax.set_facecolor("#0F1219")
@@ -83,7 +88,7 @@ def main() -> None:
     ax.set_xticklabels(labels, rotation=45, ha="right", fontsize=8, color="#D4DEEE")
     ax.set_yticks(range(n))
     ax.set_yticklabels(labels, fontsize=8, color="#D4DEEE")
-    ax.set_title("킥드럼 챌린지 6인 — 3관절(손목·팔꿈치·어깨) 평균 DTW 거리", color="#D4DEEE", pad=10)
+    ax.set_title(f"킥드럼 챌린지 {n}인 — 3관절(손목·팔꿈치·어깨) 평균 DTW 거리", color="#D4DEEE", pad=10)
     fig.colorbar(im, ax=ax, shrink=0.85)
     plt.savefig("sample_dance_dtw.png", dpi=150, bbox_inches="tight", facecolor="#080A10")
     print("\n저장 완료: sample_dance_dtw.png")

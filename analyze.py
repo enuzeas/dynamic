@@ -25,7 +25,9 @@ from demo import extract_dynamics, trim_motion
 
 
 def dtw(s1, s2):
-    """1-D DTW, O(n·m) DP."""
+    """1-D DTW, O(n·m) DP. 경로 길이(n+m)로 정규화해 반환 —
+    정규화 없이는 길이가 2배인 클립(반복 촬영·느린 템포)이 실제 동작 차이와
+    무관하게 거리 자체를 지배해버린다(golden_dance_analysis.md 3번 참고)."""
     n, m = len(s1), len(s2)
     cost = np.abs(np.subtract.outer(np.asarray(s1, float), np.asarray(s2, float)))
     D = np.full((n + 1, m + 1), np.inf)
@@ -33,7 +35,7 @@ def dtw(s1, s2):
     for i in range(1, n + 1):
         for j in range(1, m + 1):
             D[i, j] = cost[i-1, j-1] + min(D[i-1, j], D[i, j-1], D[i-1, j-1])
-    return D[n, m]
+    return D[n, m] / (n + m)
 
 JOINT = "오른손목"
 
