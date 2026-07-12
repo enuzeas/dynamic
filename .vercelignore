@@ -8,3 +8,8 @@ __pycache__
 doc/
 mvp.html
 analysis_output.png
+*.pdf
+*.pptx
+models/
+sample/
+sample_dance*/

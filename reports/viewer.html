@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>쌤쌤 — 판단 근거 · 실험 기록</title>
+<meta name="description" content="쌤쌤 프로젝트 판단 근거와 실험 기록 원문">
+<style>
+  :root{
+    --bg:#0b0f1a; --panel:#121826; --panel2:#0e1420; --line:#1e2740;
+    --text:#e8ecf5; --dim:#9aa6be; --dim2:#6b7690;
+    --accent:#3dd7b8; --accent2:#5a8dff;
+    --sans:system-ui,-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    --mono:'SF Mono',ui-monospace,'Courier New',monospace;
+    --col:820px;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:16.5px;line-height:1.75;-webkit-font-smoothing:antialiased}
+  img{max-width:100%;display:block;border-radius:10px;margin:20px 0;border:1px solid var(--line)}
+  a{color:var(--accent2)}
+
+  .topbar{position:sticky;top:0;z-index:10;background:rgba(11,15,26,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+  .topbar-in{max-width:1100px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+  .brand{font-weight:700;font-size:15px;white-space:nowrap}
+  .brand a{color:var(--text);text-decoration:none}
+  .back{font-family:var(--mono);font-size:12.5px;color:var(--dim);text-decoration:none;border:1px solid var(--line);padding:5px 10px;border-radius:20px;white-space:nowrap}
+  .back:hover{color:var(--accent)}
+
+  .tabs{max-width:1100px;margin:0 auto;padding:10px 24px 14px;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+  .tabs .grp-label{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--dim2);text-transform:uppercase;align-self:center;margin-right:2px}
+  .tab{font-family:var(--mono);font-size:13px;background:var(--panel);border:1px solid var(--line);color:var(--dim);padding:7px 13px;border-radius:20px;cursor:pointer;white-space:nowrap;transition:.15s}
+  .tab:hover{color:var(--text);border-color:var(--dim2)}
+  .tab.active{background:var(--accent);border-color:var(--accent);color:#04231c;font-weight:600}
+
+  main{max-width:var(--col);margin:0 auto;padding:44px 24px 90px}
+  #content h1{font-size:26px;line-height:1.3;letter-spacing:-.01em;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+  #content h2{font-size:20px;margin:34px 0 12px;color:var(--accent)}
+  #content h3{font-size:17px;margin:24px 0 8px}
+  #content p{color:#d2d9e8;margin:12px 0}
+  #content strong{color:#fff}
+  #content blockquote{border-left:3px solid var(--accent2);padding:8px 16px;margin:18px 0;color:var(--dim);background:var(--panel);border-radius:0 8px 8px 0}
+  #content ul,#content ol{margin:12px 0 12px 22px;color:#d2d9e8}
+  #content li{margin:5px 0}
+  #content code{font-family:var(--mono);font-size:.9em;background:var(--panel);padding:2px 6px;border-radius:5px;color:var(--accent)}
+  #content pre{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px 18px;overflow-x:auto;margin:16px 0}
+  #content pre code{background:none;padding:0;color:var(--text)}
+  #content hr{border:none;border-top:1px solid var(--line);margin:32px 0}
+  .tblwrap{overflow-x:auto;margin:18px 0;border:1px solid var(--line);border-radius:10px}
+  #content table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:480px}
+  #content th,#content td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line)}
+  #content th{background:var(--panel);font-family:var(--mono);font-size:12px;letter-spacing:.05em;color:var(--dim);text-transform:uppercase}
+  #content tr:last-child td{border-bottom:none}
+  .loading{color:var(--dim2);font-family:var(--mono);font-size:14px;padding:60px 0;text-align:center}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-in">
+    <div class="brand"><a href="../progress.html">쌤쌤 리포트</a></div>
+    <a class="back" href="../progress.html">← 진행 리포트로</a>
+  </div>
+  <nav class="tabs" id="tabs"></nav>
+</div>
+
+<main><div id="content" class="loading">불러오는 중…</div></main>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+const DOCS = [
+  {id:'motion_value_assessment', label:'판단 근거', grp:'전략'},
+  {id:'samsam_worksheet',        label:'확정 워크시트', grp:'전략'},
+  {id:'youtube_dance_analysis',  label:'① 킥드럼', grp:'실험'},
+  {id:'apple_dance_analysis',    label:'② 애플', grp:'실험'},
+  {id:'apt_dance_analysis',      label:'③ APT', grp:'실험'},
+  {id:'apt_dance_hiviews_analysis', label:'④ APT 조회수순', grp:'실험'},
+  {id:'golden_dance_analysis',   label:'⑤ Golden', grp:'실험'},
+  {id:'takemeup_dance_analysis', label:'⑥ Take Me Up', grp:'실험'},
+];
+
+const tabsEl = document.getElementById('tabs');
+const contentEl = document.getElementById('content');
+let lastGrp = null;
+DOCS.forEach(d=>{
+  if(d.grp !== lastGrp){
+    const label = document.createElement('span');
+    label.className = 'grp-label';
+    label.textContent = d.grp;
+    if(lastGrp !== null){ label.style.marginLeft = '10px'; }
+    tabsEl.appendChild(label);
+    lastGrp = d.grp;
+  }
+  const btn = document.createElement('button');
+  btn.className = 'tab';
+  btn.textContent = d.label;
+  btn.dataset.id = d.id;
+  btn.onclick = () => { location.hash = d.id; };
+  tabsEl.appendChild(btn);
+});
+
+async function load(id){
+  const doc = DOCS.find(d=>d.id===id) || DOCS[0];
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.id===doc.id));
+  contentEl.className = 'loading';
+  contentEl.textContent = '불러오는 중…';
+  try{
+    const res = await fetch(`./${doc.id}.md`);
+    const md = await res.text();
+    contentEl.className = '';
+    contentEl.innerHTML = marked.parse(md);
+    document.querySelectorAll('#content table').forEach(t=>{
+      const wrap = document.createElement('div');
+      wrap.className = 'tblwrap';
+      t.parentNode.insertBefore(wrap, t);
+      wrap.appendChild(t);
+    });
+    document.title = `${doc.label} — 쌤쌤`;
+  }catch(e){
+    contentEl.textContent = '문서를 불러오지 못했습니다.';
+  }
+}
+
+window.addEventListener('hashchange', ()=> load(location.hash.slice(1)));
+load(location.hash.slice(1) || DOCS[0].id);
+</script>
+</body>
+</html>
