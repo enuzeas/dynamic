@@ -93,3 +93,20 @@ Take Me Up 템플릿7(AI 의심 클립이 실사보다 좁게 뭉침)이 이 프
 - **⑤ Text-driven style(MotionCLIP류) — feature 아니라 fork.** 레퍼런스 클립 없는 text-to-motion-style이라 "이 사람 캡쳐" 코어에서 이탈. 디렉팅 도구로는 매력적이나 대형 text-to-motion과 경쟁하는 붐비는 판 → 별도 방향.
 
 실무 경고(ponytail): 프론티어 5개 동시 추격은 캡스톤 함정(절반 미성숙·판이 빠름). **하나의 돌아가는 파이프라인으로 개념 먼저 증명 → 이후 프론티어 교체.** 실용 진입점 = 사전학습 모션 diffusion + conditioning(처음부터 학습 X) 또는 SinMDM 한 클립. 5개 논문 동시 조립 아님.
+
+## 11. 오늘자 후속 검색(2026-07-15) — 스파이크 방향 확정
+
+`samsam_worksheet.md` 4-1의 카이스트 교수 질문 2개(footskate 현실성, Motion Puzzle vs diffusion)에 대해 최신 논문으로 답이 나왔다. 자세한 근거는 `papers.md` C·H절.
+
+**질문 1 (footskate) 답: FootMR(2026)로 해결책이 이미 있다.** 2D 발 keypoint만으로 잔차 발목 회전을 예측하는 경량 transformer이고, GVHMR 같은 기존 모델 위에 재학습 없이 후처리로 붙어 발목 오차를 최대 30% 줄인다. "모델을 만드는 게 아니라 붙인다"는 팀 원칙에 정확히 맞는 부품이라 스파이크①에 바로 추가한다 — 추측 대신 실측으로 교수 질문에 답할 수 있다.
+
+**질문 2 (Motion Puzzle vs diffusion) 답: 최근 diffusion 붐의 대부분은 함정이다.** 2024~2026 사이 나온 스타일 전이 diffusion 논문(SMooDi, LoRA-MDM, Hypernetwork-LoRA[2026-05 최신], MulSMo, Semantic-Guidance 계열 — papers.md C9–C13)을 직접 원문 확인한 결과, 전부 **콘텐츠를 텍스트 프롬프트로 지정**하는 text-to-motion+style 구조다. 겉보기엔 최신·화려하지만 "실제 촬영한 이 동작을 그대로 유지하며 스타일만 바꾼다"는 쌤쌤 코어와 입력 자체가 다르다 — 텍스트가 상상해낸 콘텐츠는 특정 인물의 캡처 동작을 재현하지 못한다. 검색 초반엔 이 구분이 안 보이고 "요즘은 다 diffusion이 SOTA"로 보이기 쉬운데, 원문 대조 결과 쌤쌤엔 안 맞는다는 게 이번 검색의 핵심 소득이다.
+
+**그래서 motion-to-motion(콘텐츠 클립을 실제로 보존) 축으로 좁히면 후보는 3개뿐:**
+- **Motion Puzzle(2022, AdaIN)** — 여전히 1순위. 검증된 공개 코드, 신체 부위별 콘텐츠+스타일 모션 입력. 스파이크①은 이걸로 시작한다.
+- VQ-Style(2026, Disney Research, papers.md C7) — 더 최신·고품질(RVQ-VAE 코드 스와핑)이지만 공개 코드 미확인. 스파이크① 진행 중 코드 유무만 짧게 확인하고, 없으면 이번 캡스톤 스코프에서 제외.
+- Constrained Diffusion(2312.07311, papers.md C8) — diffusion 계열 중 유일하게 콘텐츠를 실제 모션 keyframe으로 받는 motion-to-motion 방식. 코드 유무 확인 후 Motion Puzzle의 업그레이드 후보로만 보관.
+
+**스파이크 갱신 (samsam_worksheet.md 4절 반영):** 스파이크①(1~2회차, AMASS/Mixamo 공개 모캡에 스타일 전이 시험)은 **Motion Puzzle로 그대로 진행** + 동시에 **FootMR을 모노큘러 캡처 출력에 붙여 footskate 감소를 실측**한다. VQ-Style·Constrained Diffusion은 코드가 있으면 곁다리로 한 번 시험, 없으면 스킵 — 없는 코드를 재구현하는 데 캡스톤 세션을 쓰지 않는다.
+
+**섹션 10의 경고는 그대로 유효, 오히려 강화됨:** CAMDM(실시간)·LCM(경량화 최적화)·skeleton-agnostic·text-driven(MotionCLIP류)은 여전히 스킵 — 그리고 이번에 확인한 SMooDi/LoRA-MDM/Hypernetwork-LoRA 계열도 같은 "화려하지만 지금 안 맞는 프론티어" 목록에 추가한다. 이 5+5개를 다 쫓지 않는다는 원칙은 그대로.

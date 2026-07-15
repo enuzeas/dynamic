@@ -40,6 +40,35 @@
 | C5 | **AStF: Motion Style Transfer via Adaptive Statistics Fusor.** | [arxiv:2511.04192](https://arxiv.org/abs/2511.04192) | 적응형 통계 퓨저로 모션 스타일 전이. |
 | C6 | **D-LORD for Motion Stylization.** | [arxiv:2412.04097](https://arxiv.org/abs/2412.04097) | 모션 스타일화를 위한 분리 표현 학습. |
 
+**2026-07-15 후속 검색 — 중요 구분: motion-to-motion vs text-to-motion.** 아래 두 그룹은 표면적으로 다 "모션 스타일 전이"지만 입력이 다르다. 쌤쌤이 필요한 건 "실제로 촬영한 이 콘텐츠 동작을 그대로 유지하며 스타일만 바꾸는" **motion-to-motion**이지, "텍스트로 콘텐츠를 지정하고 스타일만 얹는" **text-to-motion+style**이 아니다. 후자는 화려하고 최신(2024~2026 diffusion 붐)이지만 콘텐츠가 텍스트 프롬프트에서 diffusion이 상상해낸 것이라 특정 인물의 캡처 동작을 그대로 보존하지 못한다 — 쌤쌤 코어("같은 동작이 사람마다 다른 결로 움직인다")에 안 맞는다.
+
+| # | 논문 | 출처 | 콘텐츠 입력 | 핵심 |
+|---|---|---|---|---|
+| C7 | **VQ-Style: Disentangling Style and Content in Motion with Residual Quantized Representations.** (Disney Research, 2026) | [arxiv:2602.02334](https://arxiv.org/html/2602.02334v2) | **모션** (콘텐츠 클립을 인코더로 코드화 후 style code만 교체 — Quantized Code Swapping) | motion-to-motion. Disney Research 소속 확인 — 산업급 신뢰도. 공개 코드 미확인(2026-07-15 기준) — 재구현 필요할 수 있어 6회 캡스톤엔 리스크. C1과 동일 논문(우선순위 갱신). |
+| C8 | **Scalable Motion Style Transfer with Constrained Diffusion Generation.** | [arxiv:2312.07311](https://arxiv.org/abs/2312.07311) | **모션** (source domain keyframe을 content constraint로 사용) | motion-to-motion diffusion. Motion Puzzle(AdaIN)의 diffusion판 대안 — text-to-motion 함정에 안 걸리는 유일한 diffusion 후보. 코드 공개 여부 미확인, 다음 스파이크에서 확인 필요. |
+| C9 | **SMooDi: Stylized Motion Diffusion Model.** (ECCV 2024) | [arxiv:2407.12783](https://arxiv.org/abs/2407.12783) — [코드](https://neu-vi.github.io/SMooDi/) | **텍스트** (사전학습 text-to-motion 모델 + style motion 1개로 가이드) | text-to-motion+style. 공개 코드 있음, 인용 많음 — 그러나 콘텐츠가 텍스트발이라 쌤쌤 코어 파이프라인엔 부적합. "텍스트로 새 동작 생성 + 스타일"이라는 인접 기능(나중 확장) 후보로만 기록. |
+| C10 | **Stylized Text-to-Motion Generation via Hypernetwork-Driven Low-Rank Adaptation.** (2026-05, 최신) | [arxiv:2605.13333](https://arxiv.org/abs/2605.13333) | **텍스트** | text-to-motion+style. SMooDi 계열의 최신형(hypernetwork가 style 예시 1개→LoRA 파라미터 매핑, 미학습 스타일 일반화 우수). 역시 콘텐츠는 텍스트발 — C9과 같은 이유로 코어 파이프라인엔 부적합. |
+| C11 | **Dance Like a Chicken: Low-Rank Stylization for Human Motion Diffusion (LoRA-MDM).** | [arxiv:2503.19557](https://arxiv.org/abs/2503.19557) | **텍스트** | text-to-motion+style. LoRA로 스타일당 소수 샘플만으로 가볍게 파인튜닝 — 컴퓨트는 가볍지만 콘텐츠 입력이 텍스트라 C9·C10과 같은 한계. |
+| C12 | **MulSMo: Multimodal Stylized Motion Generation by Bidirectional Control Flow.** | [arxiv:2412.09901](https://arxiv.org/abs/2412.09901) | **텍스트** (content prompt) | text-to-motion+style, 스타일 입력만 텍스트/이미지/모션으로 멀티모달 확장. 콘텐츠는 여전히 텍스트발. |
+| C13 | **Diffusion-based Human Motion Style Transfer with Semantic Guidance.** (CGF 2024) | [arxiv:2405.06646](https://arxiv.org/abs/2405.06646) | **텍스트** (1단계: text-to-motion prior 사전학습, 2단계: style 예시 1개로 파인튜닝) | text-to-motion+style. "Style transfer"라는 이름이지만 콘텐츠는 텍스트발 — C9·C10·C11과 같은 그룹. |
+
+**결론**: motion-to-motion 축에서 실전 후보는 여전히 **Motion Puzzle(2022, 검증된 공개 코드)**이 1순위. VQ-Style(C7)·Constrained Diffusion(C8)은 더 최신·고품질이지만 공개 코드 미확인이라 지금 스파이크의 확정 대안이 아니라 "다음 스파이크에서 코드 유무부터 확인할 후보"로만 잡는다.
+
+---
+
+## H. 풋스케이트 보정 · 최신 단안 모션캡처 (Footskate Correction & Latest Monocular MoCap, 2026-07-15 검색)
+
+카이스트 교수 상담 질문 1("단안 RGB로 스타일 캡처가 깨짐(footskate) 없이 나오는 게 현실적인가")에 대한 최신 답.
+
+| # | 논문 | 출처 | 핵심 |
+|---|---|---|---|
+| H1 | **FootMR: Improving 3D Foot Motion Reconstruction in Markerless Monocular Human Motion Capture.** | [arxiv:2603.09681](https://arxiv.org/html/2603.09681) | 2D 발 keypoint(엄지·새끼발가락·뒤꿈치·발목)만 입력받아 잔차 발목 회전을 예측하는 transformer. 이미지 재학습 없이 **GVHMR 같은 기존 3D 복원 모델 위에 붙이는 후처리**로 발목 각도 오차 최대 30% 감소, 학습에 없던 극단적 발 포즈에도 일반화. "학습 아니라 조립"이라는 팀 원칙에 정확히 맞는 형태의 부품. |
+| H2 | **RAM: Recover Any 3D Human Motion in-the-Wild.** (CVPR 2026) | [openaccess.thecvf.com](https://openaccess.thecvf.com/content/CVPR2026/html/Jia_RAM_Recover_Any_3D_Human_Motion_in-the-Wild_CVPR_2026_paper.html) | 실시간·정확도를 겨냥한 최신 단안 3D 모션 복원 프레임워크 — WHAM/GVHMR 다음 세대 후보. |
+| H3 | **OnlineHMR: Video-based Online World-Grounded Human Mesh Recovery.** | [arxiv:2603.17355](https://arxiv.org/pdf/2603.17355) | 온라인(스트리밍) 방식의 world-grounded 인체 메시 복원 — 실시간 파이프라인 필요해질 때 참고. |
+| H4 | **Skinned Motion Retargeting with Spatially Adaptive Interaction Guidance.** | [arxiv:2605.19355](https://arxiv.org/pdf/2605.19355) | 접촉·관통(penetration)을 고려한 리타겟팅 — 3회차(SMPL→Mixamo) 리타겟에서 footskate/관통이 나올 경우의 업그레이드 후보. |
+
+**정리**: H1(FootMR)은 지금 스파이크에 바로 붙여볼 수 있는 저비용 부품이라 우선순위가 가장 높다. H2·H3·H4는 "나중에, 필요해지면" 후보로 기록만 해둔다.
+
 ---
 
 ## D. 행동 기반 생체인식 (Behavioral Biometrics)
@@ -99,7 +128,11 @@
 | ★★★ | B1 (ST-GCN 2018) | 파이프라인 핵심 방법론. |
 | ★★★ | F1 (ICC 가이드라인) | 항상성 검증 지표 설계 근거. |
 | ★★★ | D2 (Biometric Survey) | EER·rank-1 지표 정당화. |
-| ★★ | C1 (VQ-Style) | 스타일-콘텐츠 분리 최신 방법론. |
+| ★★★ | H1 (FootMR, 2026) | footskate 리스크에 대한 저비용 즉시 적용 답. 교수 질문 1 직접 대응. |
+| ★★ | C2 (Motion Puzzle) | motion-to-motion 스타일 전이 1순위 후보 — 검증된 공개 코드. |
+| ★★ | C1/C7 (VQ-Style) | 스타일-콘텐츠 분리 최신 방법론(Disney Research). 코드 공개 확인 후 격상 검토. |
 | ★★ | A4 (Movement vigor) | 고유성 명제의 실험 증거. |
 | ★★ | B3 (Skeleton Gait) | 골격 기반 식별 방법론 정리. |
 | ★ | E3 (Soft-DTW) | 신경망 통합 시 필요. |
+| ★ | C8 (Constrained Diffusion) | motion-to-motion diffusion 대안 — 코드 유무 확인 필요. |
+| — | C9–C13 (SMooDi·LoRA-MDM·Hypernetwork-LoRA·MulSMo·Semantic Guidance) | text-to-motion+style 계열 — 쌤쌤 코어 파이프라인엔 부적합, 텍스트 기반 신규 동작 생성이라는 별도 기능으로만 기록. |
