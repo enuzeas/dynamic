@@ -25,7 +25,7 @@ MediaPipe `PoseLandmarker`(Tasks API, VIDEO 모드)로 프레임마다 33개 랜
 
 위치 시계열을 Savitzky-Golay 필터(`_smooth`, window=7, polyorder=3)로 평활화한 뒤 `np.gradient`로 미분해 속도를 얻고, 속도를 다시 한 번 평활화 후 미분해 가속도·저크를 만든다. 평활화 없이 위치를 두세 번 미분하면 포즈 추정 노이즈가 그대로 증폭되기 때문(코드 주석, pose_extract.py:4-5).
 
-> **참고**: `_make_landmarker()`(pose_extract.py:30)는 `models/pose_landmarker_lite.task`를 읽는다. 이 파일은 `.gitignore`의 `*.task`에 걸려 저장소에 없고, `models/` 디렉터리 자체도 로컬에 존재하지 않는다 — 루트의 `pose_landmarker.task`(초기 커밋 자산, 다른 이름)와는 별개 파일이다. 실행 전에 해당 모델 파일을 받아 `models/` 아래 놓아야 한다.
+> **참고**: `_make_landmarker()`(pose_extract.py:30)는 `src/models/pose_landmarker_lite.task`를 읽는다. 이 파일은 `.gitignore`의 `*.task`에 걸려 저장소에 없고, `src/models/` 디렉터리 자체도 로컬에 존재하지 않는다 — 루트의 `pose_landmarker.task`(초기 커밋 자산, 다른 이름)와는 별개 파일이다. 실행 전에 해당 모델 파일을 받아 `src/models/` 아래 놓아야 한다.
 
 ## demo.py — 정렬·시각화
 

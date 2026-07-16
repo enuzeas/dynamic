@@ -4,11 +4,11 @@ Dynamic ID는 영상 원본이 아니라 관절별 다이내믹스(속도 곡선
 scope.md의 "BIO-IP 등록 Mock: 특징점 → 로컬 DB 저장·조회"를 실제로 동작하는
 형태로 구현한 것 — 로컬 JSON 파일이 그 "로컬 DB"다.
 
-사용법:
-  python dynamic_id.py enroll   --label 이한성 --videos A_1.mp4 A_2.mp4 --out registry/
-  python dynamic_id.py verify   --label 이한성 --probe A_3.mp4 --registry registry/ --threshold 40
-  python dynamic_id.py identify --probe C_1.mp4 --registry registry/
-  python dynamic_id.py calibrate --registry registry/
+사용법 (repo 루트에서):
+  python src/dynamic_id.py enroll   --label 이한성 --videos sample/original/A_1.mp4 sample/original/A_2.mp4 --out registry/
+  python src/dynamic_id.py verify   --label 이한성 --probe sample/original/A_3.mp4 --registry registry/ --threshold 40
+  python src/dynamic_id.py identify --probe sample/compressed/C_1.mp4 --registry registry/
+  python src/dynamic_id.py calibrate --registry registry/
 """
 from __future__ import annotations
 

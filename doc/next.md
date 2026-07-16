@@ -3,8 +3,8 @@
 `workthrough.md`(코드), `doc/plan.md`(실행 계획), `doc/direction_brief.md`(현재 상태)를 대조해서 나온, 아직 안 끝난 것 위주. 우선순위 순.
 
 ## 1. 모델 파일 (로컬은 해결, 새 클론은 아직 막힘)
-루트의 `pose_landmarker.task`(5.7MB)가 실제로 MediaPipe Pose Landmarker **lite** 모델이었다 — `models/pose_landmarker_lite.task`로 복사하니 `extract_joint_dynamics`가 바로 동작함(A_1.mp4 186프레임 전부 검출 확인). 다운로드 불필요, 파일 위치만 문제였음.
-- `pose_landmarker.task`, `models/pose_landmarker_lite.task` 둘 다 `.gitignore`의 `*.task`에 걸려 git에 없다 — 새로 클론하면 이 파일 자체가 없다. 저장소 밖(드라이브 등)에서 모델 파일을 공유하는 경로를 정하고, README/setup에 "받아서 `models/pose_landmarker_lite.task`로 복사" 한 줄 남기기
+루트의 `pose_landmarker.task`(5.7MB)가 실제로 MediaPipe Pose Landmarker **lite** 모델이었다 — `src/models/pose_landmarker_lite.task`로 복사하니 `extract_joint_dynamics`가 바로 동작함(A_1.mp4 186프레임 전부 검출 확인). 다운로드 불필요, 파일 위치만 문제였음.
+- `pose_landmarker.task`, `src/models/pose_landmarker_lite.task` 둘 다 `.gitignore`의 `*.task`에 걸려 git에 없다 — 새로 클론하면 이 파일 자체가 없다. 저장소 밖(드라이브 등)에서 모델 파일을 공유하는 경로를 정하고, README/setup에 "받아서 `src/models/pose_landmarker_lite.task`로 복사" 한 줄 남기기 (README에 반영 완료)
 
 ## 1.5. `trim_motion` threshold 스케일 버그 — 발견 및 수정 완료
 실제로 돌려보니 `trim_motion`의 기본 threshold(0.08)가 옛 옵티컬플로우 속도 스케일 기준이었다. MediaPipe 정규화 좌표 기반 속도는 영상마다 최대치가 0.08~0.11 수준이라, 절대 threshold 0.08은 분포 최상단이라 대부분의 프레임이 잘려나갔다(A_1.mp4: 186프레임 → 7프레임). 이 때문에 rank-1 66.7%→분석 시 16.7%, EER 47.2%(거의 랜덤)로 나왔던 것.

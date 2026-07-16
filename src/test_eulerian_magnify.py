@@ -1,6 +1,6 @@
 """magnify_signal 자체 검증 — 합성 신호로 밴드 안/밖 주파수가 다르게 처리되는지 확인.
 
-실행: python test_eulerian_magnify.py
+실행 (repo 루트에서): python src/test_eulerian_magnify.py
 """
 import numpy as np
 

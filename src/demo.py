@@ -2,10 +2,10 @@
 BIO-IP Quick Demo
 같은 동작을 한 두 사람의 다이내믹스 서명을 나란히 시각화한다.
 
-사용법:
-  python demo.py --a A_1.mp4 A_2.mp4 A_3.mp4 \
-                 --b B_1.mp4 B_2.mp4 B_3.mp4 \
-                 --names "한우진" "박세준"
+사용법 (repo 루트에서):
+  python src/demo.py --a sample/original/A_1.mp4 sample/original/A_2.mp4 sample/original/A_3.mp4 \
+                     --b sample/original/B_1.mp4 sample/original/B_2.mp4 sample/original/B_3.mp4 \
+                     --names "한우진" "박세준"
 """
 
 import argparse

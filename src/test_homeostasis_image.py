@@ -6,7 +6,7 @@
 맞추면 안 된다는 것만 확인한다. (진짜 within > between 분리는 실제
 샘플로만 확인 가능 — 지금 데이터에선 분리가 약하다는 게 알려진 상태.)
 
-실행: python test_homeostasis_image.py
+실행 (repo 루트에서): python src/test_homeostasis_image.py
 """
 import numpy as np
 

@@ -6,8 +6,8 @@ Wu et al. 2012의 방식을 단순화한 버전: 그레이스케일 다운샘플
 맥박이 아니라 "동작 사이 미세 흔들림이 실제로 있는가"라 단일 스케일로 충분하다.
 필요해지면 raw pixel-level 색상 증폭으로 확장.
 
-사용법:
-  python eulerian_magnify.py --video A_1.mp4 --alpha 20 --low 0.5 --high 3.0
+사용법 (repo 루트에서):
+  python src/eulerian_magnify.py --video sample/original/A_1.mp4 --alpha 20 --low 0.5 --high 3.0
 """
 from __future__ import annotations
 
