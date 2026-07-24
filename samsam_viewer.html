@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>쌤쌤 뷰어 — 같은 동작, 다른 스타일</title>
+<style>
+  body { margin: 0; background: #0b0e14; color: #d4deee; font-family: -apple-system, sans-serif; }
+  h1 { text-align: center; font-size: 1.1rem; font-weight: 500; padding: 14px 0 4px; margin: 0; }
+  p.sub { text-align: center; color: #6a7a99; font-size: 0.85rem; margin: 0 0 10px; }
+  .row { display: flex; gap: 8px; padding: 0 8px 8px; }
+  .panel { flex: 1; min-width: 0; }
+  .panel h2 { font-size: 0.8rem; text-align: center; margin: 0 0 4px; color: #9aa9c4; font-weight: 500; }
+  .panel canvas { display: block; width: 100%; aspect-ratio: 4 / 3; border-radius: 6px; }
+</style>
+</head>
+<body>
+<h1>쌤쌤 — 같은 콘텐츠 동작(127_21), 스타일만 다름</h1>
+<p class="sub">Motion Puzzle 실제 출력(2026-07-23) · 드래그로 카메라 각도 회전</p>
+<div class="row" id="panels">
+  <div class="panel"><h2>원본 콘텐츠</h2></div>
+  <div class="panel"><h2>스타일 A (142_21)</h2></div>
+  <div class="panel"><h2>스타일 B (41_02)</h2></div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.185.1/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
+
+const SOURCES = [
+  { file: 'viewer_data/content_original.bvh', color: 0x4b8bf4 },
+  { file: 'viewer_data/style_a.bvh', color: 0x2e9e5b },
+  { file: 'viewer_data/style_b.bvh', color: 0xd4901e },
+];
+
+const clock = new THREE.Clock();
+const panels = document.querySelectorAll('.panel');
+
+SOURCES.forEach((src, i) => {
+  const panel = panels[i];
+  const mixers = [];
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0b0e14);
+  const grid = new THREE.GridHelper(300, 10, 0x2a3550, 0x1a2236);
+  scene.add(grid);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+  const dir = new THREE.DirectionalLight(0xffffff, 0.6);
+  dir.position.set(1, 2, 1);
+  scene.add(dir);
+
+  const camera = new THREE.PerspectiveCamera(45, 4 / 3, 1, 2000);
+  camera.position.set(120, 140, 220);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(400, 300, false);
+  panel.appendChild(renderer.domElement);
+
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.target.set(0, 80, 0);
+  controls.update();
+
+  // ponytail: BVH 파일마다 실제 단위(cm/inch/m)가 다를 수 있어 카메라 값을 고정하지
+  // 않고, 로드된 스켈레톤의 실측 바운딩 박스로 카메라·그리드를 자동 맞춘다.
+  function frameCameraToSkeleton(skeleton) {
+    const box = new THREE.Box3();
+    const p = new THREE.Vector3();
+    for (const bone of skeleton.bones) {
+      bone.getWorldPosition(p);
+      box.expandByPoint(p);
+    }
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    const radius = Math.max(size.length() / 2, 1e-3);
+
+    grid.scale.setScalar(radius / 10); // 기본 그리드는 반경 10 기준으로 만들어짐
+    grid.position.set(center.x, box.min.y, center.z);
+
+    camera.position.set(center.x + radius * 1.6, center.y + radius * 1.2, center.z + radius * 2.2);
+    camera.near = radius / 100;
+    camera.far = radius * 100;
+    camera.updateProjectionMatrix();
+    controls.target.copy(center);
+    controls.update();
+  }
+
+  new BVHLoader().load(src.file, (result) => {
+    const skeletonHelper = new THREE.SkeletonHelper(result.skeleton.bones[0]);
+    skeletonHelper.skeleton = result.skeleton;
+    // SkeletonHelper 기본 재질은 vertexColors라 material.color 튜닝이 안 먹는다 — 꺼야 패널별 단색이 먹힌다.
+    skeletonHelper.material.vertexColors = false;
+    skeletonHelper.material.color.setHex(src.color);
+    skeletonHelper.material.linewidth = 2;
+
+    const boneContainer = new THREE.Group();
+    boneContainer.add(result.skeleton.bones[0]);
+
+    scene.add(skeletonHelper);
+    scene.add(boneContainer);
+
+    const mixer = new THREE.AnimationMixer(skeletonHelper);
+    mixer.clipAction(result.clip).setEffectiveWeight(1.0).play();
+    mixer.update(result.clip.duration / 2); // 중간 포즈로 한 번 평가해야 바운딩 박스가 의미 있다
+    result.skeleton.bones[0].updateWorldMatrix(true, true);
+    frameCameraToSkeleton(result.skeleton);
+    mixers.push(mixer);
+  });
+
+  function animate() {
+    requestAnimationFrame(animate);
+    const delta = clock.getDelta();
+    mixers.forEach((m) => m.update(delta));
+    controls.update();
+    renderer.render(scene, camera);
+  }
+  animate();
+});
+</script>
+</body>
+</html>
