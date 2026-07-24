@@ -14,3 +14,7 @@ sample_dance_apt_hiviews/
 sample_dance_golden/
 sample_dance_takemeup/
 sample_dance_takemeup_full/
+external/
+google-cloud-sdk/
+SMPL/
+.agents/

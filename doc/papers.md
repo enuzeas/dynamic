@@ -52,7 +52,29 @@
 | C12 | **MulSMo: Multimodal Stylized Motion Generation by Bidirectional Control Flow.** | [arxiv:2412.09901](https://arxiv.org/abs/2412.09901) | **텍스트** (content prompt) | text-to-motion+style, 스타일 입력만 텍스트/이미지/모션으로 멀티모달 확장. 콘텐츠는 여전히 텍스트발. |
 | C13 | **Diffusion-based Human Motion Style Transfer with Semantic Guidance.** (CGF 2024) | [arxiv:2405.06646](https://arxiv.org/abs/2405.06646) | **텍스트** (1단계: text-to-motion prior 사전학습, 2단계: style 예시 1개로 파인튜닝) | text-to-motion+style. "Style transfer"라는 이름이지만 콘텐츠는 텍스트발 — C9·C10·C11과 같은 그룹. |
 
-**결론**: motion-to-motion 축에서 실전 후보는 여전히 **Motion Puzzle(2022, 검증된 공개 코드)**이 1순위. VQ-Style(C7)·Constrained Diffusion(C8)은 더 최신·고품질이지만 공개 코드 미확인이라 지금 스파이크의 확정 대안이 아니라 "다음 스파이크에서 코드 유무부터 확인할 후보"로만 잡는다.
+**2026-07-15 재구성 — C9~C13을 "스타일 메커니즘"이 아니라 "콘텐츠 생성기"로 재활용.** C9~C13이 쌤쌤 코어에 안 맞는 이유는 그 논문들의 **스타일 어댑터**(SMooDi의 style guidance, LoRA-MDM의 LoRA, Hypernetwork-LoRA의 hypernetwork 등)가 텍스트발 콘텐츠에 얹히기 때문이었다. 그런데 이 스타일 어댑터를 안 쓰고 **밑에 깔린 text-to-motion 백본만** 쓰면 얘기가 달라진다 — 텍스트로 새 콘텐츠 모션(예: "점프하며 춤추기")을 즉석 생성한 뒤, 그걸 Motion Puzzle의 `enc_content`에 넣고 이미 캐싱해둔 우리 자신의 `s_style`(2026-07-15 스파이크에서 검증된 "스타일 하나 → 콘텐츠 여러 개 재사용" 메커니즘, `samsam_plan.md` 2절)을 적용하면 된다. `enc_content`는 콘텐츠 모션이 캡처된 것이든 텍스트로 생성된 것이든 구분하지 않는다.
+- **역할 재배치:** C9~C13 = "베이스 모션을 텍스트로 생성하는 도구"(베이스 모션 라이브러리를 무한 확장), Motion Puzzle = "스타일을 적용하는 도구"(여전히 우리 코어). 스타일 메커니즘으로서의 부적합 판정은 그대로 유지 — 역할만 바꿔서 재활용.
+- **걸리는 것:** text-to-motion 계열 출력(HumanML3D 포맷, 22관절, SMPL 기반)과 Motion Puzzle의 골격(BVH 기반, CMU 컨벤션)이 달라 중간 리타겟팅이 필요 — 세션 4의 SMPL→Mixamo 리타겟팅과 같은 종류의 작업이라 완전히 새로운 문제는 아니다.
+- **스코프 판정:** 방향은 유효하지만 **차기 확장 기능**이다. AMASS/Mixamo 라이브러리로 지금 데모는 충분해서, 이번 6회차 코어에 넣지 않는다("코어는 하나" 원칙, `samsam_plan.md` 0절).
+
+**2026-07-15 코드 확인 결과 (실제 clone·requirements.txt 확인):**
+
+| 논문 | 공개 코드 | 확인 결과 |
+|---|---|---|
+| Motion Puzzle | [github.com/DK-Jang/motion_puzzle](https://github.com/DK-Jang/motion_puzzle) | **있음.** Python 3.8, PyTorch>=1.10, CUDA 특정 안 함, `.cuda()` 호출 3곳뿐(패치 쉬움). 사전학습 가중치·CMU 테스트 BVH 샘플 포함. M-series Mac에서 로컬 실행 가장 유력. |
+| **C14. MCM-LDM: Arbitrary Motion Style Transfer with Multi-condition Motion Latent Diffusion Model.** (CVPR 2024) — [github.com/XingliangJin/MCM-LDM](https://github.com/XingliangJin/MCM-LDM) | **있음.** | **motion-to-motion diffusion, 공개 코드+사전학습 가중치 확보 — C8이 채우지 못한 자리를 정확히 메움.** `--content_motion_dir`로 실제 콘텐츠 모션 클립을 받아 trajectory/content/style 3분해 후 재조합. Python 3.9, PyTorch 1.12.1, `.cuda()`/`device` 호출 32곳 — Motion Puzzle보다 이식 공수 큼. Diffusion이라 추론도 더 무거움. |
+| VQ-Style (C7) | 미확인 | 공개 코드 없음 — 제외. |
+| Constrained Diffusion (C8) | 미확인 | 공개 코드 없음 — 제외. |
+| FootMR (H1) | [github.com/twehrbein/FootMR](https://github.com/twehrbein/FootMR) | **있음, 그러나 `torch==2.3.0+cu121` + `pytorch3d` linux_x86_64 CUDA 휠 고정 — M-series Mac 로컬 실행 사실상 불가.** Colab 등 Linux+CUDA 환경 필요 (아래 결론 참고). |
+
+**결론**: motion-to-motion 축 1순위는 여전히 **Motion Puzzle** — 이식 공수 가장 적고 이미 clone 완료(`external/motion_puzzle`). **MCM-LDM**은 diffusion 기반이라 품질이 더 나을 수 있는 강력한 2순위 후보로 신규 확보(`external/MCM-LDM`) — 이식 공수·추론 속도 리스크 때문에 스파이크에서 "되면 좋고" 정도로 병행 시도. **FootMR**은 로컬(Mac) 실행이 막혀 있어 Colab 같은 CUDA 환경에서 1회성으로 돌려 수치만 확인하는 쪽을 권장(아래 samsam_plan.md 갱신 참고).
+
+**검토했으나 코어 부적합 판정 (기록용, 2026-07-23)** — 모션 관련 도구라 버리지 않고 남겨둠. 둘 다 "코어(임의 레퍼런스 영상 → 개인 스타일 추출)"에는 안 맞는다고 이미 판정, 재검토 트리거 없음.
+
+| 도구 | 출처 | 판정 이유 |
+|---|---|---|
+| **MotionBricks.** (NVIDIA GR00T-WholeBodyControl) | [github.com/NVlabs/GR00T-WholeBodyControl/tree/main/motionbricks](https://github.com/NVlabs/GR00T-WholeBodyControl/tree/main/motionbricks) | 실시간 로봇(Unitree G1) 전신 컨트롤러. VQVAE+pose/root 모델. "스타일"이 좀비 걸음 등 11개 사전학습 프리셋을 키로 전환하는 것뿐 — 임의 레퍼런스 영상에서 스타일을 뽑는 인코더가 없음. 출력 스켈레톤도 로봇(G1)뿐이라 사람(SMPL/Mixamo)으로 리타겟하는 도구도 없음. |
+| **ARDY.** (nv-tlabs, SIGGRAPH 2026) | [github.com/nv-tlabs/ardy](https://github.com/nv-tlabs/ardy) | 텍스트+키네마틱 제약(웨이포인트/키프레임) 기반 오토리그레시브 디퓨전 모션 생성기. footskate 보정 후처리 포함. 콘텐츠 입력이 텍스트/제약조건이라 레퍼런스 모션에서 스타일을 뽑는 경로가 없음. RTX 4090+ 요구라 무료 Colab보다도 무거움. C9~C13(text-to-motion 계열)과 같은 범주 — "텍스트로 콘텐츠 모션 즉석 생성" 보조 도구로는 차기 확장 후보, 코어는 아님. |
 
 ---
 
@@ -66,8 +88,9 @@
 | H2 | **RAM: Recover Any 3D Human Motion in-the-Wild.** (CVPR 2026) | [openaccess.thecvf.com](https://openaccess.thecvf.com/content/CVPR2026/html/Jia_RAM_Recover_Any_3D_Human_Motion_in-the-Wild_CVPR_2026_paper.html) | 실시간·정확도를 겨냥한 최신 단안 3D 모션 복원 프레임워크 — WHAM/GVHMR 다음 세대 후보. |
 | H3 | **OnlineHMR: Video-based Online World-Grounded Human Mesh Recovery.** | [arxiv:2603.17355](https://arxiv.org/pdf/2603.17355) | 온라인(스트리밍) 방식의 world-grounded 인체 메시 복원 — 실시간 파이프라인 필요해질 때 참고. |
 | H4 | **Skinned Motion Retargeting with Spatially Adaptive Interaction Guidance.** | [arxiv:2605.19355](https://arxiv.org/pdf/2605.19355) | 접촉·관통(penetration)을 고려한 리타겟팅 — 3회차(SMPL→Mixamo) 리타겟에서 footskate/관통이 나올 경우의 업그레이드 후보. |
+| H5 | **freemocap.** (도구, 논문 아님) | [github.com/freemocap/freemocap](https://github.com/freemocap/freemocap) | **단안이 아니라 멀티캠(2대+) 캘리브레이션 기반** 오픈소스 모캡. `skellytracker`로 3D keypoint 추출, BVH/SMPL 익스포트. NVIDIA GPU 권장/CPU 폴백, Python 3.9–3.11 별도 venv. footskate/깊이 모호성을 삼각측량으로 원천 회피 — **FootMR 스파이크가 실패할 경우의 멀티캠 재상담(`samsam_plan.md` 7절) Plan B 후보.** 도입 시 촬영 가이드(고정 카메라 1대) 자체를 다시 써야 함, 아직 미채택. |
 
-**정리**: H1(FootMR)은 지금 스파이크에 바로 붙여볼 수 있는 저비용 부품이라 우선순위가 가장 높다. H2·H3·H4는 "나중에, 필요해지면" 후보로 기록만 해둔다.
+**정리**: H1(FootMR)은 지금 스파이크에 바로 붙여볼 수 있는 저비용 부품이라 우선순위가 가장 높다. H2·H3·H4는 "나중에, 필요해지면" 후보로 기록만 해둔다. H5(freemocap)는 H1 게이트가 실패로 판정될 때만 꺼내보는 카드 — 지금 단계에서 촬영 방식을 바꿀 이유는 없음.
 
 ---
 
@@ -117,6 +140,30 @@
 | G6 | Guo, D. et al. (2024). **Benchmarking Micro-action Recognition: Dataset, Methods, and Applications.** (MA-52) | [arXiv:2403.05234](https://arxiv.org/abs/2403.05234), *IEEE TCSVT* | 심리 인터뷰에서 전신 소동작(손-몸통, 머리-손, 다리 상호작용 포함)을 대규모(22K 샘플)로 수집. 손목 이하 국소 관절이 아니라 신체 부위 간 상호작용 단위로 "작은 동작"을 정의하는 관점 — 관절 선택 논의에 참고. |
 
 **정리**: G2·G3는 "손가락 단위 소동작도 근접 촬영·통제된 조건이면 pose estimation으로 꽤 정확히 잡힌다"는 증거지만, 둘 다 손을 화면 가까이 크게 잡은 임상/실험 세팅이다. 지금 프로젝트의 전신 댄스 챌린지 촬영 거리에서는 이 정확도가 그대로 옮겨오지 않는다 — G1(Eulerian magnification)이 오히려 "먼 거리에서도 미세 신호를 증폭해서 잡는" 대안 기법으로 더 맞을 수 있음. G4·G6은 소동작을 다루는 기존 연구들이 대부분 감정·심리 분석 목적이라 "신원 식별"이 아닌 다른 각도에서 소동작을 본다는 점도 유의.
+
+---
+
+## I. 표정 스타일 (Facial Expression Style) — 탐색 후보, 문헌 검색 전
+
+몸동작에 스타일이 있다면(C절) 표정에도 있을까라는 질문에서 시작. 아직 정식 문헌 검색은 안 했고, 도구 하나만 확인해둔 상태.
+
+| # | 항목 | 출처 | 핵심 |
+|---|---|---|---|
+| I1 | **GNM (Head).** (도구, 논문 아님) | [github.com/google/GNM](https://github.com/google/GNM) | Google의 3D 파라메트릭 헤드/얼굴 모델(3DMM). identity·expression·head pose를 분리된 축으로 컨트롤(NumPy/JAX/PyTorch/TF 지원, Apache-2.0). **표정 "스타일 캡처" 도구는 아님** — 형태 재구성/렌더링용 모델이고, "이 사람 특유의 표정 짓는 방식"을 레퍼런스 영상에서 뽑아내는 기능은 없음. 다만 identity/expression을 분리하는 설계 자체는 C절 스타일-콘텐츠 분리와 같은 발상이라 참고용으로 기록. |
+
+**2026-07-22 실제 문헌 검색 결과 — 6건 확인.** arxiv.org/GitHub에서 각 인용을 직접 확인(가짜 인용 없음). Motion Puzzle(C2)의 "임의 레퍼런스 영상에서 스타일 코드를 뽑아 콘텐츠에 이식"하는 구조와 가장 닮은 것은 StyleTalk(I2)·EDTalk(I4)·TranSTYLer(I5) — 셋 다 스타일 인코더가 레퍼런스에서 스타일 벡터를 추출해 콘텐츠(오디오/텍스트)에 조건부로 주입하는 명시적 분리 구조를 씀.
+
+| # | 논문 | 출처 | 핵심 |
+|---|---|---|---|
+| I2 | Ma, Y. et al. (2023). **StyleTalk: One-shot Talking Head Generation with Controllable Speaking Styles.** (AAAI 2023, Oral) | [arxiv:2301.01081](https://arxiv.org/abs/2301.01081) — [코드](https://github.com/FuxiVirtualHuman/styletalk) | (a) **명시적 분리**: 스타일 인코더가 임의 레퍼런스 영상에서 발화 스타일 코드를 뽑고, style-aware adaptive transformer가 그 코드로 디코더 가중치를 조정해 콘텐츠에 주입. (b) 콘텐츠 입력은 **오디오**(음성) + 1장의 초상 이미지(one-shot). (c) 코드·사전학습 가중치 공개(추론 코드만, 학습 코드는 부분적), **MIT 라이선스**. Motion Puzzle과 구조적으로 가장 유사한 후보. |
+| I3 | Thambiraja, B. et al. (2023). **Imitator: Personalized Speech-driven 3D Facial Animation.** (ICCV 2023) | [arxiv:2301.00023](https://arxiv.org/abs/2301.00023) — [코드](https://github.com/bala1144/Imitator) | (a) **부분 분리**: 대규모 데이터로 스타일-무관(style-agnostic) 오디오→표정 prior를 먼저 학습한 뒤, 5초 레퍼런스 영상에서 뽑은 "personalized style-embedding"으로 파인튜닝 — 스타일이 별도 벡터로 명시되긴 하나 콘텐츠와 완전히 분리된 latent가 아니라 조건부 파인튜닝 방식. (b) 콘텐츠 입력은 **오디오**(음성), 스타일은 5초 레퍼런스 **영상**. (c) 학습/추론 코드·사전학습 가중치 공개, 라이선스 파일 없음(명시 안 됨). |
+| I4 | Tan, S. et al. (2024). **EDTalk: Efficient Disentanglement for Emotional Talking Head Synthesis.** (ECCV 2024, oral 여부 미확인) | [arxiv:2404.01647](https://arxiv.org/abs/2404.01647) — [코드](https://github.com/tanshuai0219/EDTalk) | (a) **명시적 분리**: 입 모양(콘텐츠)·머리 포즈·감정 표현을 직교 기저(orthogonal basis)를 가진 3개의 독립 latent 공간으로 분해해 각각 따로 조작 가능 — I2보다 분리 축이 더 세분화됨(감정=스타일에 해당). (b) 콘텐츠 입력은 **오디오 또는 영상** 둘 다 지원(모달리티 유연). (c) 코드·사전학습 가중치 공개, **Apache-2.0**. |
+| I5 | Fares, M., Pelachaud, C., Obin, N. **TranSTYLer: Multimodal Behavioral Style Transfer for Facial and Body Gestures Generation.** (arXiv 2023 preprint → Speech Communication 誌 2025, vol.174, art.103286) | [arxiv:2308.10843](https://arxiv.org/abs/2308.10843) | (a) **명시적 분리**: 콘텐츠 인코더(소스 화자의 텍스트·발화 semantics)와 스타일 인코더(타겟 화자의 멜스펙트로그램·2D 얼굴 랜드마크·2D 포즈·대화 태그)를 분리하고 discriminator로 분리를 강제하는 adversarial 구조 — 얼굴+상체 제스처를 동시에 생성하는 유일한 후보. (b) 콘텐츠 입력은 **텍스트+오디오**(스타일은 얼굴 랜드마크 포함 멀티모달). (c) **공개 코드 미확인** — GitHub/HuggingFace/CatalyzeX 어디에도 저장소를 찾지 못함, 재현 불가 리스크. |
+| I6 | Ginosar, S. et al. (2019). **Learning Individual Styles of Conversational Gesture.** (CVPR 2019) — 얼굴 아닌 **몸/제스처**, 비교용 | [arxiv:1906.04160](https://arxiv.org/abs/1906.04160) — [코드](https://github.com/amirbar/speech2gesture) | (a) **암묵적 분리**: 명시적 스타일 벡터 없이 화자별로 별도 모델(person-specific model)을 학습해 그 화자만의 몸짓 패턴을 통째로 캡처 — I2·I4·I5의 "스타일 코드 하나로 여러 화자" 구조보다 원시적이지만, "동작에 개인차가 있다"는 쌤쌤 코어 전제를 CVPR급으로 처음 입증한 선행연구. (b) 콘텐츠 입력은 **오디오**(음성) → 팔·손 동작 생성. (c) 코드·10명 화자 144시간 데이터셋 공개. |
+
+**추가로 확인했으나 채택 안 함**: Bozkurt, E. **"Personalized Speech-driven Expressive 3D Facial Animation Synthesis with Style Control"** ([arxiv:2310.17011](https://arxiv.org/abs/2310.17011))도 발현(expression)을 style/content latent로 명시적으로 분리하는 유사 구조지만, 단독 저자·소속 불명, 게재 venue 없이 preprint 상태로 3년째 방치, 공개 코드도 못 찾아 신뢰도가 낮아 표에서 제외.
+
+**정리**: 몸동작 쪽 C2(Motion Puzzle)에 대응하는 "표정판"은 확인됨 — StyleTalk(I2)·EDTalk(I4)·TranSTYLer(I5)가 모두 "레퍼런스에서 스타일 코드를 뽑아 콘텐츠에 조건부 주입"하는 동일 발상을 쓴다. 다만 이들은 전부 **콘텐츠 입력이 오디오/텍스트**(발화 내용)라는 점이 Motion Puzzle과 결정적으로 다르다 — Motion Puzzle은 콘텐츠가 이미 캡처된 모션 클립인데, 표정판은 "무슨 말을 하는가"가 콘텐츠라 "레퍼런스 표정 영상 자체를 콘텐츠로 유지하며 스타일만 바꾸는" motion-to-motion류 얼굴판은 이번 검색에서 발견되지 않음. 가장 근접한 후보는 코드·가중치·라이선스가 모두 확실한 **EDTalk**(감정 latent를 다른 영상에서 뽑아 이식 가능, 즉 표정 레퍼런스→표정 레퍼런스 전이에 가장 가까움).
 
 ---
 
