@@ -95,8 +95,8 @@
 
 | 단계 | 작업 | 도구 |
 |---|---|---|
-| 4-0a | GVHMR SMPL-X 출력 → SMPL 24관절 회전 | `smpl2bvh`(KosukeFukazawa, MIT, clone 필요, 아직 미실행) |
-| 4-0b | SMPL 24관절 → CMU 원본 31관절 BVH 리타겟(Motion Puzzle 입력용) | **완료(2026-07-23)** — `retarget_smpl_to_cmu.py` 작성, 합성 데이터로 실제 `test.py --content`에 먹여 스타일 전이 출력까지 확인(`test_retarget_smpl_to_cmu.py`) |
+| 4-0a | GVHMR SMPL-X 출력 → SMPL 24관절 회전 | **완료(2026-07-25)** — `hmr4d_to_npz.py`. 원래 계획한 `smpl2bvh`는 clone·실행까지 해봤으나 (a) GVHMR 출력이 이미 로컬 축각이라 변환기 자체가 불필요했고 (b) 실행해보니 0-회전 관절에서 NaN 나는 버그 발견 — 둘 다 실제 실행으로 확인, 근거는 `samsam_dev_spec.md` 1절 |
+| 4-0b | SMPL 24관절 → CMU 원본 31관절 BVH 리타겟(Motion Puzzle 입력용) | **완료(2026-07-23)** — `retarget_smpl_to_cmu.py` 작성, 합성 데이터로 실제 `test.py --content`에 먹여 스타일 전이 출력까지 확인(`test_retarget_smpl_to_cmu.py`). 2026-07-25: `hmr4d_to_npz.py` 출력을 입력으로 한 통합 검증도 통과(`test_hmr4d_to_npz.py`) |
 | 4-1 | styled CMU-BVH → Mixamo 리타겟(뷰어용) | `deep-motion-editing`(Aberman et al., BSD-2-Clause, Mixamo 사전학습 확인됨, clone 필요) |
 | 4-2 | footskate·관통(penetration) 발생 시에만 업그레이드 검토 | papers.md H4 (Spatially Adaptive Interaction Guidance) — 코드 있을 때만, 없으면 스킵 |
 
