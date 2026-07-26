@@ -225,14 +225,37 @@ Promise.all([
   xbot.updateMatrixWorld(true);
   const templateSkinned = xbot.getObjectByProperty('type', 'SkinnedMesh');
   if (!sources.length) { setStatus('입력 BVH가 없습니다 (external/motion_puzzle/datasets/cmu/test_bvh 확인)', true); return; }
-  // 드롭다운 채우기
-  for (const s of sources) {
-    contentSel.add(new Option(stem(s.name), s.url));
-    styleSel.add(new Option(stem(s.name), s.url));
+  // 데모용 큐레이션 — CMU 공식 설명(una-dinosauria/cmu-mocap 인덱스)에서 명확·상이한 동작만
+  // 골라 한국어 라벨. 나머지 270개는 "전체(CMU ID)" 그룹에 그대로 둔다.
+  const CURATED = [
+    { f: '07_11.bvh', ko: '걷기', en: 'walk' },
+    { f: '16_45.bvh', ko: '뛰기', en: 'run/jog' },
+    { f: '118_05.bvh', ko: '점프', en: 'jump' },
+    { f: '74_03.bvh', ko: '발차기', en: 'kick' },
+    { f: '80_10.bvh', ko: '복싱', en: 'boxing' },
+    { f: '90_28.bvh', ko: '브레이크댄스', en: 'breakdance' },
+    { f: '60_03.bvh', ko: '살사 댄스', en: 'salsa dance' },
+    { f: '13_01.bvh', ko: '앉았다 일어서기', en: 'sit & stand up' },
+    { f: '55_07.bvh', ko: '닭 흉내', en: 'chicken' },
+    { f: '137_11.bvh', ko: '공룡 흉내', en: 'dinosaur' },
+    { f: '142_21.bvh', ko: '빗속에서 노래', en: 'singing in the rain' },
+    { f: '127_21.bvh', ko: '달리다 점프', en: 'run-jump-stop' },
+  ];
+  const urlByName = {};
+  for (const s of sources) urlByName[s.name] = s.url;
+
+  function fillSelect(sel) {
+    const g1 = document.createElement('optgroup'); g1.label = '추천 동작 (이름)';
+    for (const c of CURATED) if (urlByName[c.f]) g1.appendChild(new Option(`${c.ko} — ${c.en}`, urlByName[c.f]));
+    sel.appendChild(g1);
+    const g2 = document.createElement('optgroup'); g2.label = '전체 (CMU ID)';
+    for (const s of sources) g2.appendChild(new Option(stem(s.name), s.url));
+    sel.appendChild(g2);
   }
-  // 기본값: 127_21(콘텐츠) / 142_21(스타일)이 있으면 선택
-  const pick = (sel, want) => { const o = [...sel.options].find((o) => o.text === want); if (o) sel.value = o.value; };
-  pick(contentSel, '127_21'); pick(styleSel, '142_21');
+  fillSelect(contentSel); fillSelect(styleSel);
+  // 기본 데모 페어: "걷기"에 "닭 흉내" 스타일 — 결 차이가 가장 눈에 띄는 조합
+  contentSel.value = urlByName['07_11.bvh'] || contentSel.options[0].value;
+  styleSel.value = urlByName['55_07.bvh'] || styleSel.options[0].value;
 
   // rig는 아무 소스 BVH의 rest로 한 번만 계산(전부 같은 CMU 골격).
   bvhLoader.load(sources[0].url, (res0) => {
@@ -251,9 +274,9 @@ Promise.all([
       renderFns.forEach((f) => f());
     })();
 
-    // 콘텐츠/스타일 패널은 선택 즉시 그 모션을 보여준다
-    const loadContent = () => { panels.content.setMotion(contentSel.value); document.getElementById('content-tag').textContent = stem(contentSel.selectedOptions[0].value.split('/').pop()); };
-    const loadStyle = () => { panels.style.setMotion(styleSel.value); document.getElementById('style-tag').textContent = stem(styleSel.selectedOptions[0].value.split('/').pop()); };
+    // 콘텐츠/스타일 패널은 선택 즉시 그 모션을 보여준다 (태그는 드롭다운에 표시된 이름 그대로)
+    const loadContent = () => { panels.content.setMotion(contentSel.value); document.getElementById('content-tag').textContent = contentSel.selectedOptions[0].text; };
+    const loadStyle = () => { panels.style.setMotion(styleSel.value); document.getElementById('style-tag').textContent = styleSel.selectedOptions[0].text; };
     contentSel.onchange = loadContent;
     styleSel.onchange = loadStyle;
     loadContent(); loadStyle();
@@ -265,8 +288,10 @@ runBtn.onclick = async () => {
   if (!panels) return;
   const content = contentSel.value.split('/').pop();
   const style = styleSel.value.split('/').pop();
+  const contentLabel = contentSel.selectedOptions[0].text;
+  const styleLabel = styleSel.selectedOptions[0].text;
   runBtn.disabled = true;
-  setStatus(`Motion Puzzle 실행 중… (${stem(content)} ← ${stem(style)} 스타일, 최대 수십 초)`);
+  setStatus(`Motion Puzzle 실행 중… (${contentLabel} ← ${styleLabel} 스타일, 최대 수십 초)`);
   try {
     const r = await fetch('/api/transfer', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -275,7 +300,7 @@ runBtn.onclick = async () => {
     const j = await r.json();
     if (!r.ok) throw new Error(j.error || '실행 실패');
     await panels.result.setMotion(j.url);
-    document.getElementById('result-tag').textContent = `${stem(content)} + ${stem(style)} 스타일`;
+    document.getElementById('result-tag').textContent = `${contentLabel} + ${styleLabel} 스타일`;
     setStatus('완료 — 오른쪽 결과 패널을 확인하세요.');
   } catch (e) {
     setStatus('오류: ' + e.message, true);
