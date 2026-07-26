@@ -35,7 +35,7 @@
 ```
 [촬영]                [2D 포즈]        [2D→3D + 발보정]      [스타일 전이]        [리타겟]            [렌더/뷰어]
 단안 RGB 고정카메라  →  MediaPipe Pose →  GVHMR + FootMR   →  Motion Puzzle    →  SMPL→Mixamo      →  three.js
-8동작×8-12인          (로컬, 무료)        (Colab, 1세션)       (로컬 Mac, 사전학습)  (Aberman retarget)   (OrbitControls,
+8동작×8-12인          (로컬, 무료)        (Colab, 1세션)       (로컬 Mac, 사전학습)  (회전공식+T정렬)     (OrbitControls,
                                                                                                         before/after)
                                                                                                              │
                                                                                                              ▼
@@ -56,7 +56,7 @@ three.js 카메라 경로 선택 → 구동 포즈 영상 렌더(DWPose 포맷, 
 | 2D→3D | **GVHMR** | FootMR이 GVHMR 코드베이스를 그대로 포크한 것으로 확인(2026-07-23) — WHAM/MediaPipe를 골랐으면 FootMR용 글루 코드가 별도로 필요해 "조립" 원칙 위반. 정확도·속도도 WHAM보다 우세. |
 | Footskate 보정 | FootMR | GVHMR과 같은 Colab 세션에서 이어서 실행(환경 셋업 1회로 충분) |
 | 스타일 전이 | **Motion Puzzle** | motion-to-motion(텍스트 아님), Mac 로컬 CPU 실행 가능, 2026-07-15 스파이크에서 스타일 분리·콘텐츠 보존 모두 게이트 통과 |
-| 리타겟 (2단계) | SMPL→CMU(`smpl2bvh`+커스텀 스크립트) → [스타일 전이] → CMU→Mixamo(Aberman `deep-motion-editing`) | Motion Puzzle·three.js가 서로 다른 스켈레톤을 요구해 리타겟이 앞뒤로 한 번씩 필요함을 2026-07-23 코드 확인으로 재확인. SMPL→CMU 구간은 사전학습 도구가 없어 커스텀 스크립트 필요(`samsam_dev_spec.md` 1절). footskate/관통 보이면 H4(papers.md) 검토 |
+| 리타겟 (2단계) | SMPL→CMU(`hmr4d_to_npz.py`+`retarget_smpl_to_cmu.py`) → [스타일 전이] → CMU→Mixamo(브라우저 JS 회전 리타겟) | Motion Puzzle·three.js가 서로 다른 스켈레톤을 요구해 리타겟이 앞뒤로 한 번씩 필요. CMU→Mixamo(4-1)는 사전학습 딥러닝(deep-motion-editing) 대신 결정론적 회전 공식(`ℓ=A_parent⁻¹·Q·A_i`)+T-pose 방향 정렬로 확정, Mixamo X Bot(FBX)에 전 관절 dot=1.0로 입힘(`samsam_dev_spec.md` 1절 "4-1 최종 해법"). footskate/관통 보이면 H4(papers.md) 검토 |
 | 렌더/뷰어 | three.js | OrbitControls로 카메라 각도 조작이 그냥 내장 기능 — 별도 개발 불필요 |
 | 평가 | DTW·ICC (기존 `analyze.py`) | 식별 트랙에서 이미 만든 자산 재사용 |
 | [확장] 카메라 구동영상 | DWPose 포맷 렌더 스크립트 | MimicMotion/Moore-AnimateAnyone/MusePose 전부 OpenPose 아닌 DWPose 사용(2026-07-23 확인) |
@@ -70,8 +70,8 @@ three.js 카메라 경로 선택 → 구동 포즈 영상 렌더(DWPose 포맷, 
 |---|---|---|---|
 | 1~2 | 2D 포즈 + 데이터 수집 + 스타일 전이 스파이크① (게이트: DTW 분리 확인) | 박세준(기술) / 전원(촬영) | **게이트 통과** (2026-07-15) |
 | 3 | 2D→3D(GVHMR) + FootMR 통합 + 스파이크② (게이트: footskate 실측) | 박세준 | **완료(2026-07-23)** — Colab에서 실행 성공, 렌더 영상 확인. footskate 정량 수치화는 다음 과제 |
-| 4 | 리타겟팅 SMPL→Mixamo | 박세준 | 진행 중 — 4-0(GVHMR→SMPL 24관절→CMU 리타겟) 완료(2026-07-25), 4-1(CMU→Mixamo) 미착수 |
-| 5 | 렌더/뷰어(three.js), before/after | 송필순 | 미착수 |
+| 4 | 리타겟팅 SMPL→Mixamo | 박세준 | **완료(2026-07-25)** — 4-0(GVHMR→SMPL 24관절→CMU)·4-1(CMU→Mixamo) 전부 완료 |
+| 5 | 렌더/뷰어(three.js), before/after | 송필순 | 진행 중 — `samsam_viewer.html` 프로토타입 존재(BVH 3패널 + Mixamo 리타겟 검증 패널). 우리 실촬영 데이터로 전환은 세션 6과 함께 |
 | 6 | 우리 데이터로 style 추출·주입 + DTW·ICC 평가 + 통합 | 전원 | 미착수 — 완성 데모 목표 |
 | 7 (후보) | 카메라 프리비즈 → AI 영상 생성 스파이크 | 미정 | 모델 선정 완료(MusePose), 착수 여부 팀 결정 대기 |
 

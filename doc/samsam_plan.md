@@ -97,7 +97,7 @@
 |---|---|---|
 | 4-0a | GVHMR SMPL-X 출력 → SMPL 24관절 회전 | **완료(2026-07-25)** — `hmr4d_to_npz.py`. 원래 계획한 `smpl2bvh`는 clone·실행까지 해봤으나 (a) GVHMR 출력이 이미 로컬 축각이라 변환기 자체가 불필요했고 (b) 실행해보니 0-회전 관절에서 NaN 나는 버그 발견 — 둘 다 실제 실행으로 확인, 근거는 `samsam_dev_spec.md` 1절 |
 | 4-0b | SMPL 24관절 → CMU 원본 31관절 BVH 리타겟(Motion Puzzle 입력용) | **완료(2026-07-23)** — `retarget_smpl_to_cmu.py` 작성, 합성 데이터로 실제 `test.py --content`에 먹여 스타일 전이 출력까지 확인(`test_retarget_smpl_to_cmu.py`). 2026-07-25: `hmr4d_to_npz.py` 출력을 입력으로 한 통합 검증도 통과(`test_hmr4d_to_npz.py`) |
-| 4-1 | styled CMU-BVH → Mixamo 리타겟(뷰어용) | `deep-motion-editing`(Aberman et al., BSD-2-Clause, Mixamo 사전학습 확인됨, clone 필요) |
+| 4-1 | styled CMU-BVH → Mixamo 리타겟(뷰어용) | **회전 리타겟 완료(2026-07-26)** — `deep-motion-editing`(이름 고정 24캐릭터 전용)·`Soldier.glb`(좌표프레임 3중고) 둘 다 폐기하고, **Mixamo X Bot(FBX) + 이름매핑 + `ℓ=A_parent⁻¹·Q·A_i` + T-pose 방향 정렬**로 확정. 전 관절 방향 dot=1.0 검증. 힙 이동(점프·전진)도 추가(카메라 수평 추적). 함정·근거는 `samsam_dev_spec.md` 1절 "4-1 최종 해법". 발 고정만 남음 |
 | 4-2 | footskate·관통(penetration) 발생 시에만 업그레이드 검토 | papers.md H4 (Spatially Adaptive Interaction Guidance) — 코드 있을 때만, 없으면 스킵 |
 
 모션이 캐릭터에 입혀지는 게 목표 상태. 문제 없으면 4-2는 건너뛴다(조기 최적화 금지). **4-0b는 clone-and-run이 아니라 실제 코딩 작업이라 다른 단계보다 시간이 더 걸릴 수 있음** — 세션 일정 잡을 때 반영.

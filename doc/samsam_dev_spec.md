@@ -29,7 +29,7 @@ GVHMR 출력(SMPL-X npz)
    │                                                        │
    │                                              [스타일 주입] → styled BVH 출력
    │                                                        │
-   └─ (4-1) ─────────────────────────────────────→ styled BVH → Mixamo 리타겟(Aberman) → three.js 뷰어
+   └─ (4-1) ─────────────────────────────→ styled BVH → 회전 리타겟(이름매핑 + A_parent⁻¹·Q·A_i + T-pose 정렬) → X Bot(three.js 뷰어)
 ```
 
 ### 4-0a 최종 결정 (2026-07-25, smpl2bvh 실제 clone·실행 후 뒤집음)
@@ -41,13 +41,36 @@ GVHMR 출력(SMPL-X npz)
 
 **결론**: smpl2bvh clone은 `external/smpl2bvh`에 참고·시각 디버그용으로만 남겨두고(파이프라인 제외), 4-0a는 **`hmr4d_to_npz.py`**(신규, 20줄 안팎의 순수 배열 변환 — `global_orient`+`body_pose`를 이어붙이고 손(SMPL 22·23, GVHMR 출력에 아예 없음)은 항등회전, `transl`은 ×100해서 CMU BVH의 cm 스케일에 맞춤)로 확정. SMPL 모델 파일도, smplx 패키지도, 별도 env도 필요 없어져 "여전히 미결"이었던 4-0a용 env 문제 자체가 사라짐.
 
-### 폐기된 경로 (2026-07-23 원래 계획, 기록용)
+### 4-1 최종 해법 (2026-07-26, 여러 번 뒤집은 끝에 확정 — 전 관절 dot=1.0 검증)
 
-**왜 이게 단순 포맷 변환이 아니라고 봤는지**: `preprocess/generate_dataset.py`의 `process_data()`가 관절을 **이름이 아니라 고정 배열 인덱스**로 골라낸다(`global_xforms[:, np.array([0,2,3,4,5,7,8,9,10,...])]`) — 즉 입력 BVH가 CMU 원본 모캡과 **정확히 같은 관절 순서·개수**여야 한다는 점은 4-0b(CMU 리타겟)에는 여전히 유효한 발견이다. 다만 그 앞단(SMPL-X→SMPL 24관절)에 별도 변환 도구가 필요하다고 본 것이 틀렸다.
+styled CMU-BVH의 회전을 Mixamo 휴머노이드에 입히는 리타겟. **사전학습 딥러닝 리타겟(deep-motion-editing)은 폐기**(맨 아래 근거), 대신 **결정론적 회전 리타겟**으로 확정했다. 여기까지 오는 데 함정이 많아 전부 기록한다 — 최종 해법은 아래 3가지의 조합이다.
 
-- **[KosukeFukazawa/smpl2bvh](https://github.com/KosukeFukazawa/smpl2bvh)** (MIT, 실존 확인, clone 완료) — SMPL 파라미터를 BVH로 변환하는 도구지만, 위 이유로 우리 파이프라인엔 안 씀. 의존성은 `torch`·`numpy`·`smplx`·`pickle`이고 CUDA 전용 고정은 없어 Mac 로컬(CPU)에서 실행은 됨(2026-07-25 실측 확인, `mcmldm` env + chumpy/numpy 몽키패치 필요) — 나중에 SMPL 자체 스켈레톤을 눈으로 디버그하고 싶을 때만 참고.
-- **[DeepMotionEditing/deep-motion-editing](https://github.com/DeepMotionEditing/deep-motion-editing)** (Aberman et al., BSD-2-Clause, 1.7k★, 실존 확인) — 리타게팅 네트워크는 **Mixamo 캐릭터로 사전학습**돼 있음(README에 학습/테스트 캐릭터가 Mixamo로 명시, `datasets/__init__.py`에 하드코딩). SMPL 스켈레톤에 대해선 사전학습된 게 없어 재학습 없이는 4-0에 못 씀("학습 금지" 원칙과 충돌) — 이 저장소는 여전히 **4-1(styled BVH→Mixamo)의 실제 후보**(변경 없음, Mixamo가 이 도구의 원래 서식지).
-- **안심 근거**: Aberman/Li/Weng의 동일 저장소 자체가 "CMU mocap dataset의 표준 스켈레톤"을 스타일 전이 학습 데이터 포맷으로 쓰고 있다고 README에 명시 — Motion Puzzle이 요구하는 CMU-21 컨벤션이 이 연구 계보 전체가 공유하는 표준이라는 뜻.
+**(1) 깨끗한 리그로 교체 — Soldier.glb → Mixamo X Bot(FBX).**
+처음엔 three.js 예제의 `Soldier.glb`를 썼는데, 이 리그가 좌표프레임이 엉망이라 어떤 리타겟 방법도 안 맞았다(실측으로 확인한 3중고): ① 조상 노드 `Z_UP`이 -90° X회전을 걸어 본들이 Y-up이 아닌 프레임에 살고, ② 아마추어에 100배/0.01배 중첩 스케일이 박혀 있고, ③ 힙 rest에 180° Y회전이 베이크돼 있었다. 이 셋이 겹쳐 카메라·회전·스케일 버그를 줄줄이 만들었다. **Mixamo 기본 캐릭터 X Bot을 FBX(T-pose)로 받아 교체하니 리그가 깨끗했다** — 실측: Y-up, 힙 worldScale=1, 힙 rest 회전 ≈ 항등, 오른팔 rest 방향 -X(= CMU BVH 오른팔 방향과 일치). Mixamo는 glTF를 안 주므로 FBX로 받아 `FBXLoader`로 직접 로드(변환 도구가 좌표프레임을 또 건드리는 걸 회피). `viewer_data/xbot.fbx`.
+
+**(2) 올바른 회전 공식 — ℓ_i = A_parent(i)⁻¹ · Q_src_i · A_i.**
+`A_i` = 타겟 본 i의 rest **월드** 누적 회전(= `bone.getWorldQuaternion()` at rest), `Q_src_i` = CMU 본 i의 로컬 회전. CMU는 rest가 전부 항등이라 rest 월드도 항등 → 소스의 "rest 대비 델타"가 곧 절대 월드회전이 되고, 그걸 타겟 rest 월드 위에 얹어 로컬로 되돌리면 이 식. **처음에 쓴 `ℓ = R_rest_local · Q`(부모 누적회전 무시)가 틀린 공식이었고, 이게 "다리 꼬임·팔 휘적"의 진짜 원인**이었다(팔·다리처럼 부모가 항등이 아닌 사슬에서 전부 어긋남). 올바른 공식으로 바꾸니 **팔은 dot=1.0(완벽)**, 다리는 dot≈0.94로 개선.
+
+**(3) T-pose 방향 정렬 — 남은 다리 dot 0.94를 1.0으로.**
+팔은 우연히 CMU와 X Bot의 rest 팔 방향이 일치(둘 다 -X)해 (2)만으로 완벽했지만, **X Bot rest 다리는 CMU보다 ~20° 벌어져(A-스탠스)** 있어 dot 0.94가 남았고, 그 20° 차이가 무릎 굽힘 평면을 돌려 깊은 스쿼트에서 다리가 겹쳤다. 방향 dot로는 이 twist가 안 잡혀서 처음엔 놓쳤다. 해법: 각 사지 본에 대해 **rest 월드 방향(부모→자식)을 소스에 맞추는 최소회전** `align_i = Quaternion.setFromUnitVectors(타겟rest방향, 소스rest방향)`를 구해 `M_i = align_i · A_i`로 교체(팔은 align≈항등이라 그대로 완벽 유지). 정렬 대상은 사지 10본(UpLeg·Leg·Foot·Arm·ForeArm 좌우). **결과: 허벅지·정강이·팔 전부 dot=1.000, 전 프레임** — 다리 교차 소멸. 매핑 표·align·검증은 `samsam_viewer.html`.
+
+**(4) 힙 이동(점프·전진) 추가 (2026-07-26).**
+회전만 넣었을 땐 제자리 재생이라 소스의 점프·전진이 안 보였다("모션퍼즐처럼 점프를 안 한다"는 피드백). 힙 이동 트랙을 추가: `hipLocal(t) = restLocal + (bvhHip(t) - bvhHip(0)) · scale`. X Bot·CMU 둘 다 Y-up·같은 월드 방향(회전 dot=1.0로 확인)이라 **축 스왑 없이 성분 그대로** 매핑(Soldier 때의 x,z,y 스왑·부호 뒤집기가 전부 불필요). `scale = X Bot 다리길이(cm) / CMU 다리길이(BVH단위)`로 점프높이·보폭이 몸 크기에 비례. 이 클립은 전진이 ~6.8m로 커서(실측: 소스 힙 Z 0.2→109단위) **카메라가 힙의 수평 이동을 매 프레임 따라가게** 함(캐릭터는 프레임에 크게 유지, 그리드가 흘러 전진이 보이고, 점프는 프레임 안에서 수직으로 보임; target·카메라를 같은 델타로 옮겨 OrbitControls 드래그 회전은 유지).
+
+**현재 상태**: 회전 정확(전 관절 dot=1.0) + 점프·전진 재현 완료. 발 고정(footskate 보정)은 남은 과제(지금도 착지·서기는 자연스러움).
+
+### 겪은 함정 (같은 삽질 반복 방지용 기록)
+
+- **본 이름 콜론 제거**: `FBXLoader`·`GLTFLoader` 둘 다 로드 시 본 이름의 콜론을 뗀다 — 원본 `mixamorig:Hips` → 로드 후 `mixamorigHips`. 콜론 버전으로 매핑 표를 짰다가 "No target node found" 경고로 전 관절이 안 움직였다.
+- **Neck vs Neck1**: Motion Puzzle 출력 BVH(21관절 축소판)에는 `Neck`이 아니라 `Neck1`만 있다(+`LowerBack`·`Shoulder` 좌우·손가락 상세 없음). `Neck`으로 매핑해 목이 내내 안 움직였다.
+- **패널별 Clock 공유 금지**: 4개 패널이 `THREE.Clock` 하나를 공유하면 같은 rAF 프레임 안에서 나중에 `getDelta()`하는 패널일수록 델타가 0에 수렴해 멈춘 것처럼 보인다. 시계 하나(`masterClock`)로 통합하고 각 패널은 로드 완료 시점의 경과시간을 따라잡게 함.
+- **retargetClip(three.js SkeletonUtils) 안 씀**: 표준 도구라 시도했으나 (a) Soldier에선 `bone.matrix.decompose()`가 본 스케일을 건드려 놓고 복원 안 해 메쉬가 폭발(중첩 스케일 때문, `skeleton.pose()`로 우회 가능했지만), (b) 깨끗한 X Bot에서도 bare Skeleton을 소스로 넘기면 baking이 깨져 다리 dot=-0.94(반대)·팔 dot=0.00(수직)로 오히려 더 나빴다. 손수 짠 (2)+(3) 공식이 전 관절 1.0으로 압승.
+
+### 폐기된 후보 (기록용)
+
+- **[DeepMotionEditing/deep-motion-editing](https://github.com/DeepMotionEditing/deep-motion-editing)** (Aberman et al., BSD-2-Clause, clone 완료) — 사전학습 리타겟 네트워크는 학습·평가 때 **이름이 고정된 24개 Mixamo 캐릭터**만 다룬다(`retargeting/datasets/__init__.py`의 `get_character_names()`). `combined_motion.py`가 캐릭터별 정규화 통계(`mean_var/{character}_mean.npy`)·기준자세(`std_bvhs/{character}.bvh`, 둘 다 Google Drive 데이터셋 안)를 읽어, 우리 CMU 골격 같은 새 스켈레톤은 재학습 없이 못 씀("학습 금지" 원칙 위반) → 폐기.
+- **`Soldier.glb`** — 위 (1)의 3중고로 폐기, `viewer_data/`에서 삭제함(2026-07-26). 필요하면 three.js 예제 저장소에서 다시 받을 수 있음.
+- **[KosukeFukazawa/smpl2bvh](https://github.com/KosukeFukazawa/smpl2bvh)** — 4-0a 후보였다 폐기(위 "4-0a 최종 결정" 절), 4-1과 무관.
 
 ---
 
@@ -61,8 +84,8 @@ GVHMR 출력(SMPL-X npz)
 | 3-1/3-2 | Colab 노트북 `gvhmr_footmr_colab.ipynb` (신규) | — | 영상 → SMPL-X npz (footskate 보정 포함) |
 | 4-0a | **`hmr4d_to_npz.py` — 작성·검증 완료(2026-07-25)** | — (smpl2bvh는 버그·불필요로 폐기, 위 절 참고) | GVHMR/FootMR `hmr4d_results.pt`(`smpl_params_global`) → SMPL 24관절 축각 npz(`test_hmr4d_to_npz.py`로 합성 데이터 왕복 + Motion Puzzle 통합까지 검증) |
 | 4-0b | **`retarget_smpl_to_cmu.py` — 작성·검증 완료(2026-07-23)** | SMPL 24관절 축각 → CMU 원본 31관절 BVH(`--content` 입력용) | 합성 데이터로 왕복 검증 + **실제 Motion Puzzle `test.py --content`에 먹여서 스타일 전이 출력까지 확인**(`test_retarget_smpl_to_cmu.py`). 21관절로 줄여 저장하면 `process_data()`의 고정 인덱스가 깨진다는 걸 실패로 먼저 확인 → 31관절 원본 구조(10개 무해 관절은 항등회전)로 재작성해서 해결 |
-| 4-1 | `external/deep-motion-editing`(Aberman, clone 필요) 호출 | Mixamo 사전학습 모델 그대로 | styled CMU-BVH → Mixamo FBX/glTF |
-| 5 | `samsam_viewer.html` (신규, 프로젝트 폴더 아니라 단일 파일 — 빌드 없는 정적 사이트 컨벤션 유지) | 없음 — `reports/viewer.html`은 마크다운 리포트 뷰어, `index.html`/`mvp.html`은 2D MVP라 3D 스켈레톤과 무관 | BVH(현재) → three.js `BVHLoader` + OrbitControls, 3패널 나란히. **2026-07-23 실제 작성·Playwright 스크린샷으로 렌더링 확인 완료**(`external/motion_puzzle` 오늘 재실행 결과물 사용) — 아직 Mixamo가 아니라 BVH 그대로 표시(4-1 리타겟 전 임시), 리타겟 되면 glTF로 교체 |
+| 4-1 | **`samsam_viewer.html`에 통합 — 회전+힙이동 완료·검증(2026-07-26)** | `viewer_data/xbot.fbx`(Mixamo X Bot, `FBXLoader`) | CMU BVH 회전 → 이름 매핑 + `ℓ=A_parent⁻¹·Q·A_i` + T-pose 방향 정렬(align) → mixamorig 구동, **전 관절 dot=1.0**. 힙 이동(점프·전진) 트랙도 추가(축 스왑 없이 성분 매핑, 카메라 수평 추적). 발 고정만 남음 |
+| 5 | `samsam_viewer.html` (신규, 프로젝트 폴더 아니라 단일 파일 — 빌드 없는 정적 사이트 컨벤션 유지) | 없음 — `reports/viewer.html`은 마크다운 리포트 뷰어, `index.html`/`mvp.html`은 2D MVP라 3D 스켈레톤과 무관 | BVH 3패널(원본/스타일A/스타일B) + Mixamo 캐릭터(X Bot) 리타겟 검증 패널 1개, 총 4패널. **2026-07-26: 4-1 회전 리타겟 완성으로 Mixamo 스킨 패널이 스켈레톤과 관절 방향까지 일치(dot=1.0).** 3패널은 여전히 BVH 스켈레톤 직접 표시 |
 | 6-2 | `evaluate_icc.py` (신규 — ICC 구현이 코드베이스에 전혀 없음, 확인함) | `analyze.py`의 DTW | styled BVH 여러 개 → ICC 계수 |
 
 ---
@@ -74,7 +97,7 @@ GVHMR 출력(SMPL-X npz)
 | 로컬 `.venv` (Python 3.14, 기존 `requirements.txt`) | mediapipe 포즈 추출, DTW/ICC 평가 | 이미 있음, 그대로 사용. `skeleton_extract.py`·`evaluate_icc.py` 신규 작성 + 자체검증 통과(2026-07-23) |
 | conda env `motion_puzzle` (Python 3.8.20, PyTorch 2.4.1) | 스타일 전이 추론 | **이미 존재 + 오늘 실제로 재실행해서 확인함.** `.cuda()` 하드콜 없음(이미 `torch.device(... if is_available ...)`로 패치돼 있음), CMU 샘플로 `test.py` 정상 실행·BVH 출력 확인(`external/motion_puzzle/output/dev_verify_test/`) — "pyenv vs conda 결정 필요"는 해소됨(conda, 이미 있는 걸 그대로 씀) |
 | conda env `mcmldm` (Python 3.9.23) | MCM-LDM(2순위 후보) | 이미 존재, 오늘은 미실행(코어 아님) |
-| deep-motion-editing용 env | 리타겟(4-1) | **미생성** — README·소스 확인상 Mac(CPU) 로컬 실행 가능해 보임(2026-07-23 확인), `motion_puzzle` env 재사용 가능한지 다음에 확인. (4-0a는 `hmr4d_to_npz.py`로 대체돼 별도 env 불필요해짐, 2026-07-25) |
+| (해당 없음) | 리타겟(4-1) | **불필요(2026-07-26)** — 리타겟이 브라우저 JS(three.js `FBXLoader` + 회전 공식)로 끝나 별도 conda env·파이썬 도구 자체가 필요 없음. 입력 캐릭터는 `viewer_data/xbot.fbx`(Mixamo X Bot, T-pose FBX) |
 | Colab 노트북 1개 | **GVHMR + FootMR만** (같은 세션에서 이어서 실행) | **완료(2026-07-23)** — `footmr_colab.ipynb`, 실제 실행 성공. 겪은 문제 5가지(python3.10 부트스트랩, chumpy 빌드, tkinter 죽은 import, vitpose-h-wholebody 별도 링크, 파일명 특수문자)와 해결책 전부 노트북·`samsam_plan.md` 3절에 반영 |
 
 ---
@@ -88,7 +111,8 @@ GVHMR 출력(SMPL-X npz)
 - **해소됨(2026-07-23)**: 4-0b 커스텀 리타겟 스크립트 — 작성 완료, 합성 데이터로 Motion Puzzle 실제 파이프라인 통합까지 검증 통과. GVHMR 실측 데이터 나오면 바로 연결 가능한 상태.
 - **해소됨(2026-07-23)**: 세션 5 three.js 뷰어 — `samsam_viewer.html` 프로토타입 작성 + Playwright 스크린샷으로 실제 렌더링 확인(BVH 직접 로드, 아직 Mixamo 리타겟 전).
 - **해소됨(2026-07-25)**: 4-0a — `hmr4d_to_npz.py` 작성, 합성 `hmr4d_results.pt` 구조 데이터로 왕복 검증 + Motion Puzzle 실제 파이프라인 통합까지 검증 통과(`test_hmr4d_to_npz.py`). GVHMR 실측 데이터 나오면 바로 연결 가능.
-- **여전히 미결**: deep-motion-editing(4-1) 별도 env 필요 여부 — 아직 clone 안 함.
+- **해소됨(2026-07-26 최종)**: 4-1 회전 리타겟 — Soldier.glb 리그 문제로 여러 번 뒤집은 끝에 "Mixamo X Bot(FBX) + `ℓ=A_parent⁻¹·Q·A_i` + T-pose 방향 정렬"로 확정. 전 관절 방향 dot=1.0 검증. 근거·함정은 위 "4-1 최종 해법" 절.
+- **해소됨(2026-07-26)**: 4-1 힙 이동 — 점프·전진 트랙 추가 완료(축 스왑 없이 성분 매핑, 카메라 수평 추적). 발 고정(footskate)만 남음.
 - **여전히 미결**: Colab 노트북 착수 시점 — GVHMR·FootMR은 Google 계정 기반 Colab 실행이 필요해 이 세션에서 직접 실행은 못 함, 노트북 초안 작성은 가능.
 
 ---
