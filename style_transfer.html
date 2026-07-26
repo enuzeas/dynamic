@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>쌤쌤 — 스타일 전이 UI</title>
+<style>
+  body { margin: 0; background: #0b0e14; color: #d4deee; font-family: -apple-system, sans-serif; }
+  h1 { text-align: center; font-size: 1.15rem; font-weight: 600; padding: 14px 0 2px; margin: 0; }
+  p.sub { text-align: center; color: #6a7a99; font-size: 0.82rem; margin: 0 0 12px; }
+  .bar { display: flex; gap: 14px; align-items: flex-end; justify-content: center; flex-wrap: wrap; padding: 0 12px 12px; }
+  .ctl { display: flex; flex-direction: column; gap: 4px; }
+  .ctl label { font-size: 0.72rem; color: #8ea0c0; }
+  select { background: #121826; color: #e8ecf5; border: 1px solid #263050; border-radius: 7px; padding: 7px 10px; font-size: 0.85rem; min-width: 150px; }
+  button { background: #3dd7b8; color: #04231c; border: none; border-radius: 7px; padding: 9px 18px; font-size: 0.88rem; font-weight: 700; cursor: pointer; }
+  button:disabled { background: #2a3550; color: #6a7a99; cursor: default; }
+  .status { font-size: 0.78rem; color: #9aa9c4; min-height: 1.1em; align-self: center; }
+  .status.err { color: #ff8a8a; }
+  .note { text-align: center; font-size: 0.72rem; color: #55617a; margin: -6px 0 10px; }
+  .row { display: flex; gap: 10px; padding: 0 12px 16px; flex-wrap: wrap; justify-content: center; }
+  .panel { flex: 1 1 300px; max-width: 440px; min-width: 0; }
+  .panel h2 { font-size: 0.85rem; text-align: center; margin: 0 0 5px; color: #b8c6e0; font-weight: 600; }
+  .panel .tag { display: block; font-size: 0.72rem; color: #6a7a99; font-weight: 400; }
+  .panel canvas { display: block; width: 100%; aspect-ratio: 3 / 4; border-radius: 8px; background: #0d111a; }
+  .panel.result h2 { color: #3dd7b8; }
+</style>
+</head>
+<body>
+<h1>쌤쌤 — 스타일 전이 UI</h1>
+<p class="sub">콘텐츠 모션 + 레퍼런스 스타일 모션 → Motion Puzzle 스타일 전이 → Mixamo 캐릭터로 확인</p>
+<div class="bar">
+  <div class="ctl"><label for="content">콘텐츠 모션 (무엇을 하는가)</label><select id="content"></select></div>
+  <div class="ctl"><label for="style">레퍼런스 스타일 (어떤 결로)</label><select id="style"></select></div>
+  <button id="run">스타일 전이 실행</button>
+  <div class="status" id="status"></div>
+</div>
+<p class="note">영상 → 모션(BVH) 변환은 GVHMR(Colab GPU) 단계입니다. 여기선 그 결과·레퍼런스 BVH를 입력으로 씁니다.</p>
+<div class="row" id="panels">
+  <div class="panel"><h2>콘텐츠<span class="tag" id="content-tag">—</span></h2></div>
+  <div class="panel"><h2>레퍼런스 스타일<span class="tag" id="style-tag">—</span></h2></div>
+  <div class="panel result"><h2>스타일 전이 결과<span class="tag" id="result-tag">실행 전</span></h2></div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three/three.module.js",
+    "three/addons/": "./vendor/three/addons/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
+import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
+
+// --- 리타겟 (samsam_viewer.html과 동일 로직; 근거는 samsam_dev_spec.md 4-1) ---
+const CMU_TO_MIXAMO = {
+  Hips: 'mixamorigHips',
+  Spine: 'mixamorigSpine1', Spine1: 'mixamorigSpine2',
+  Neck1: 'mixamorigNeck', Head: 'mixamorigHead',
+  LeftArm: 'mixamorigLeftArm', LeftForeArm: 'mixamorigLeftForeArm', LeftHand: 'mixamorigLeftHand',
+  RightArm: 'mixamorigRightArm', RightForeArm: 'mixamorigRightForeArm', RightHand: 'mixamorigRightHand',
+  LeftUpLeg: 'mixamorigLeftUpLeg', LeftLeg: 'mixamorigLeftLeg',
+  LeftFoot: 'mixamorigLeftFoot', LeftToeBase: 'mixamorigLeftToeBase',
+  RightUpLeg: 'mixamorigRightUpLeg', RightLeg: 'mixamorigRightLeg',
+  RightFoot: 'mixamorigRightFoot', RightToeBase: 'mixamorigRightToeBase',
+};
+function buildRetargetClip(bvhClip, kmByBone, hipCfg) {
+  const tracks = [];
+  const qs = new THREE.Quaternion();
+  for (const track of bvhClip.tracks) {
+    const m = track.name.match(/^(.+)\.quaternion$/);
+    if (!m) continue;
+    const mixamoBone = CMU_TO_MIXAMO[m[1]];
+    if (!mixamoBone || !kmByBone[mixamoBone]) continue;
+    const { K, M } = kmByBone[mixamoBone];
+    const values = track.values.slice();
+    for (let i = 0; i < values.length; i += 4) {
+      qs.set(values[i], values[i + 1], values[i + 2], values[i + 3]);
+      const out = K.clone().multiply(qs).multiply(M);
+      values[i] = out.x; values[i + 1] = out.y; values[i + 2] = out.z; values[i + 3] = out.w;
+    }
+    tracks.push(new THREE.QuaternionKeyframeTrack(`${mixamoBone}.quaternion`, track.times, values));
+  }
+  if (hipCfg) {
+    const hipTrack = bvhClip.tracks.find((t) => t.name === 'Hips.position');
+    if (hipTrack) {
+      // 비교 UI에선 verticalOnly=true — 수평 전진(~6.8m)은 빼고 점프(Y)만 남긴다. 캐릭터가
+      // 제자리에서 뛰어 항상 프레임에 잡히고, 스타일 비교가 깔끔하다(카메라 추적 불필요).
+      const src = hipTrack.values;
+      const y0 = src[1], s = hipCfg.scale, r = hipCfg.restLocal, vOnly = hipCfg.verticalOnly;
+      const x0 = src[0], z0 = src[2];
+      const positions = new Float32Array(src.length);
+      for (let i = 0; i < src.length; i += 3) {
+        positions[i] = vOnly ? r.x : r.x + (src[i] - x0) * s;
+        positions[i + 1] = r.y + (src[i + 1] - y0) * s;
+        positions[i + 2] = vOnly ? r.z : r.z + (src[i + 2] - z0) * s;
+      }
+      tracks.push(new THREE.VectorKeyframeTrack('mixamorigHips.position', hipTrack.times, positions));
+    }
+  }
+  return new THREE.AnimationClip('retargeted', bvhClip.duration, tracks);
+}
+function computeRig(targetSkinned, srcSkeleton) {
+  const bones = {};
+  targetSkinned.skeleton.bones.forEach((b) => { bones[b.name] = b; });
+  targetSkinned.skeleton.bones[0].updateWorldMatrix(true, true);
+  const srcBones = {};
+  srcSkeleton.bones.forEach((b) => { srcBones[b.name] = b; });
+  srcSkeleton.bones[0].updateWorldMatrix(true, true);
+  const MIXAMO_TO_CMU = {};
+  for (const [c, m] of Object.entries(CMU_TO_MIXAMO)) MIXAMO_TO_CMU[m] = c;
+  const DIR_CHILD = {
+    mixamorigLeftUpLeg: 'mixamorigLeftLeg', mixamorigLeftLeg: 'mixamorigLeftFoot', mixamorigLeftFoot: 'mixamorigLeftToeBase',
+    mixamorigRightUpLeg: 'mixamorigRightLeg', mixamorigRightLeg: 'mixamorigRightFoot', mixamorigRightFoot: 'mixamorigRightToeBase',
+    mixamorigLeftArm: 'mixamorigLeftForeArm', mixamorigLeftForeArm: 'mixamorigLeftHand',
+    mixamorigRightArm: 'mixamorigRightForeArm', mixamorigRightForeArm: 'mixamorigRightHand',
+  };
+  const worldDir = (a, b) => b.getWorldPosition(new THREE.Vector3()).sub(a.getWorldPosition(new THREE.Vector3())).normalize();
+  const alignByBone = {};
+  for (const [mName, mChild] of Object.entries(DIR_CHILD)) {
+    const tBone = bones[mName], tChild = bones[mChild];
+    const sName = MIXAMO_TO_CMU[mName], sChild = MIXAMO_TO_CMU[mChild];
+    if (!tBone || !tChild || !srcBones[sName] || !srcBones[sChild]) continue;
+    alignByBone[mName] = new THREE.Quaternion().setFromUnitVectors(worldDir(tBone, tChild), worldDir(srcBones[sName], srcBones[sChild]));
+  }
+  const Mworld = {};
+  targetSkinned.skeleton.bones.forEach((b) => {
+    const A = b.getWorldQuaternion(new THREE.Quaternion());
+    const al = alignByBone[b.name];
+    Mworld[b.name] = al ? al.clone().multiply(A) : A;
+  });
+  const kmByBone = {};
+  for (const mName of Object.values(CMU_TO_MIXAMO)) {
+    const bone = bones[mName];
+    if (!bone) continue;
+    const parentM = (bone.parent && Mworld[bone.parent.name]) ? Mworld[bone.parent.name] : new THREE.Quaternion();
+    kmByBone[mName] = { K: parentM.clone().invert(), M: Mworld[mName].clone() };
+  }
+  const legLen = (map, up, lo, ft) =>
+    map[up].getWorldPosition(new THREE.Vector3()).distanceTo(map[lo].getWorldPosition(new THREE.Vector3())) +
+    map[lo].getWorldPosition(new THREE.Vector3()).distanceTo(map[ft].getWorldPosition(new THREE.Vector3()));
+  const ws = new THREE.Vector3();
+  bones['mixamorigHips'].getWorldScale(ws);
+  const xbotLegCm = legLen(bones, 'mixamorigRightUpLeg', 'mixamorigRightLeg', 'mixamorigRightFoot') / (ws.x || 1);
+  const bvhLeg = legLen(srcBones, 'RightUpLeg', 'RightLeg', 'RightFoot');
+  return { kmByBone, hipCfg: { restLocal: bones['mixamorigHips'].position.clone(), scale: xbotLegCm / bvhLeg, verticalOnly: true } };
+}
+
+const masterClock = new THREE.Clock();
+const bvhLoader = new BVHLoader();
+
+// 패널 하나 = 씬+캐릭터+카메라. setMotion(bvhUrl)로 언제든 다른 모션을 로드해 갈아끼운다.
+function makePanel(panelEl, xbotTemplate, rig) {
+  const character = cloneSkinned(xbotTemplate);
+  character.scale.setScalar(0.01);
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0d111a);
+  scene.add(new THREE.HemisphereLight(0xdfe7f5, 0x2a2f3a, 2.4));
+  const key = new THREE.DirectionalLight(0xffffff, 2.2); key.position.set(1.5, 3, 2.5); scene.add(key);
+  const fill = new THREE.DirectionalLight(0x9db4d8, 1.0); fill.position.set(-2, 1, 1.5); scene.add(fill);
+  const grid = new THREE.GridHelper(4, 12, 0x2c3a56, 0x18202e); scene.add(grid);
+  scene.add(character);
+
+  const camera = new THREE.PerspectiveCamera(42, 3 / 4, 0.01, 100);
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(340, 453, false);
+  panelEl.querySelector('h2').after(renderer.domElement);
+  const controls = new OrbitControls(camera, renderer.domElement); controls.enablePan = false;
+
+  // 현재 캐릭터 포즈를 담도록 카메라·그리드를 맞춘다(새 모션 로드 때마다 다시 호출).
+  function frameCamera() {
+    character.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(character);
+    const c = box.getCenter(new THREE.Vector3());
+    const h = Math.max(box.max.y - box.min.y, 0.1);
+    grid.position.set(c.x, box.min.y, c.z);
+    camera.position.set(c.x, c.y + h * 0.12, c.z + h * 2.3);
+    camera.near = h / 100; camera.far = h * 200; camera.updateProjectionMatrix();
+    controls.target.copy(c); controls.update();
+  }
+  frameCamera();
+
+  const mixer = new THREE.AnimationMixer(character);
+
+  function render() {
+    controls.update();
+    renderer.render(scene, camera);
+  }
+
+  function setMotion(bvhUrl) {
+    return new Promise((resolve, reject) => {
+      bvhLoader.load(bvhUrl, (res) => {
+        mixer.stopAllAction();
+        const clip = buildRetargetClip(res.clip, rig.kmByBone, rig.hipCfg);
+        mixer.clipAction(clip).play();
+        mixer.update(0);   // t=0 포즈로 세팅
+        frameCamera();     // 새 모션 시작 포즈에 카메라 맞춤(수평 이동 없으니 이후 재프레이밍 불필요)
+        resolve();
+      }, undefined, reject);
+    });
+  }
+  return { mixer, render, setMotion };
+}
+
+const panelEls = document.querySelectorAll('#panels .panel');
+const contentSel = document.getElementById('content');
+const styleSel = document.getElementById('style');
+const runBtn = document.getElementById('run');
+const statusEl = document.getElementById('status');
+let panels = null;
+
+function setStatus(msg, isErr) { statusEl.textContent = msg; statusEl.className = 'status' + (isErr ? ' err' : ''); }
+function stem(name) { return name.replace(/\.bvh$/, ''); }
+
+Promise.all([
+  new Promise((res) => new FBXLoader().load('viewer_data/xbot.fbx', res)),
+  fetch('/api/sources').then((r) => r.json()),
+]).then(([xbot, { sources }]) => {
+  xbot.updateMatrixWorld(true);
+  const templateSkinned = xbot.getObjectByProperty('type', 'SkinnedMesh');
+  if (!sources.length) { setStatus('입력 BVH가 없습니다 (external/motion_puzzle/datasets/cmu/test_bvh 확인)', true); return; }
+  // 드롭다운 채우기
+  for (const s of sources) {
+    contentSel.add(new Option(stem(s.name), s.url));
+    styleSel.add(new Option(stem(s.name), s.url));
+  }
+  // 기본값: 127_21(콘텐츠) / 142_21(스타일)이 있으면 선택
+  const pick = (sel, want) => { const o = [...sel.options].find((o) => o.text === want); if (o) sel.value = o.value; };
+  pick(contentSel, '127_21'); pick(styleSel, '142_21');
+
+  // rig는 아무 소스 BVH의 rest로 한 번만 계산(전부 같은 CMU 골격).
+  bvhLoader.load(sources[0].url, (res0) => {
+    const rig = computeRig(templateSkinned, res0.skeleton);
+    panels = {
+      content: makePanel(panelEls[0], xbot, rig),
+      style: makePanel(panelEls[1], xbot, rig),
+      result: makePanel(panelEls[2], xbot, rig),
+    };
+    const renderFns = [panels.content.render, panels.style.render, panels.result.render];
+    const mixers = [panels.content.mixer, panels.style.mixer, panels.result.mixer];
+    (function animate() {
+      requestAnimationFrame(animate);
+      const d = masterClock.getDelta();
+      mixers.forEach((m) => m.update(d));
+      renderFns.forEach((f) => f());
+    })();
+
+    // 콘텐츠/스타일 패널은 선택 즉시 그 모션을 보여준다
+    const loadContent = () => { panels.content.setMotion(contentSel.value); document.getElementById('content-tag').textContent = stem(contentSel.selectedOptions[0].value.split('/').pop()); };
+    const loadStyle = () => { panels.style.setMotion(styleSel.value); document.getElementById('style-tag').textContent = stem(styleSel.selectedOptions[0].value.split('/').pop()); };
+    contentSel.onchange = loadContent;
+    styleSel.onchange = loadStyle;
+    loadContent(); loadStyle();
+    setStatus('준비됨 — 콘텐츠·스타일을 고르고 실행하세요.');
+  });
+});
+
+runBtn.onclick = async () => {
+  if (!panels) return;
+  const content = contentSel.value.split('/').pop();
+  const style = styleSel.value.split('/').pop();
+  runBtn.disabled = true;
+  setStatus(`Motion Puzzle 실행 중… (${stem(content)} ← ${stem(style)} 스타일, 최대 수십 초)`);
+  try {
+    const r = await fetch('/api/transfer', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content, style }),
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || '실행 실패');
+    await panels.result.setMotion(j.url);
+    document.getElementById('result-tag').textContent = `${stem(content)} + ${stem(style)} 스타일`;
+    setStatus('완료 — 오른쪽 결과 패널을 확인하세요.');
+  } catch (e) {
+    setStatus('오류: ' + e.message, true);
+  } finally {
+    runBtn.disabled = false;
+  }
+};
+</script>
+</body>
+</html>
