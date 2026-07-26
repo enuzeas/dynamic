@@ -6,27 +6,22 @@
 <title>쌤쌤 뷰어 — 같은 동작, 다른 스타일</title>
 <style>
   body { margin: 0; background: #0b0e14; color: #d4deee; font-family: -apple-system, sans-serif; }
-  h1 { text-align: center; font-size: 1.1rem; font-weight: 500; padding: 14px 0 4px; margin: 0; }
-  p.sub { text-align: center; color: #6a7a99; font-size: 0.85rem; margin: 0 0 10px; }
-  .row { display: flex; gap: 8px; padding: 0 8px 8px; }
-  .panel { flex: 1; min-width: 0; }
-  .panel h2 { font-size: 0.8rem; text-align: center; margin: 0 0 4px; color: #9aa9c4; font-weight: 500; }
-  .panel canvas { display: block; width: 100%; aspect-ratio: 4 / 3; border-radius: 6px; }
-  /* Mixamo 패널은 자기 행을 독차지해서 그대로 두면 4:3이 너무 커진다 — 위 3패널과 같은 폭으로 */
-  #mixamo-panel { justify-content: center; }
-  #mixamo-panel .panel { flex: 0 0 calc((100% - 16px) / 3); }
+  h1 { text-align: center; font-size: 1.15rem; font-weight: 600; padding: 16px 0 4px; margin: 0; }
+  p.sub { text-align: center; color: #6a7a99; font-size: 0.85rem; margin: 0 0 12px; }
+  .row { display: flex; gap: 10px; padding: 0 12px 12px; flex-wrap: wrap; justify-content: center; }
+  .panel { flex: 1 1 320px; max-width: 460px; min-width: 0; }
+  .panel h2 { font-size: 0.85rem; text-align: center; margin: 0 0 5px; color: #b8c6e0; font-weight: 600; }
+  .panel .tag { display: block; font-size: 0.72rem; color: #6a7a99; font-weight: 400; margin-top: 1px; }
+  .panel canvas { display: block; width: 100%; aspect-ratio: 3 / 4; border-radius: 8px; background: #0d111a; }
 </style>
 </head>
 <body>
-<h1>쌤쌤 — 같은 콘텐츠 동작(127_21), 스타일만 다름</h1>
-<p class="sub">Motion Puzzle 실제 출력(2026-07-23) · 드래그로 카메라 각도 회전</p>
+<h1>쌤쌤 — 같은 콘텐츠 동작, 사람마다 다른 스타일</h1>
+<p class="sub">Motion Puzzle 스타일 전이 출력을 Mixamo 캐릭터에 리타겟(2026-07-26) · 드래그로 카메라 회전</p>
 <div class="row" id="panels">
-  <div class="panel"><h2>원본 콘텐츠</h2></div>
-  <div class="panel"><h2>스타일 A (142_21)</h2></div>
-  <div class="panel"><h2>스타일 B (41_02)</h2></div>
-</div>
-<div class="row" id="mixamo-panel">
-  <div class="panel"><h2>Mixamo 캐릭터 리타겟 (스타일 A, 4-1 검증)</h2></div>
+  <div class="panel"><h2>원본 콘텐츠<span class="tag">스타일 전이 전 (127_21)</span></h2></div>
+  <div class="panel"><h2>스타일 A<span class="tag">142_21 스타일 주입</span></h2></div>
+  <div class="panel"><h2>스타일 B<span class="tag">41_02 스타일 주입</span></h2></div>
 </div>
 
 <script type="importmap">
@@ -40,110 +35,19 @@
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
+import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 
+// 3패널 = 같은 콘텐츠 동작에 서로 다른 스타일을 입힌 Motion Puzzle 출력(모두 CMU-BVH 포맷).
+// 셋 다 같은 X Bot 캐릭터에 리타겟해 "같은 동작, 다른 스타일"을 캐릭터로 비교.
 const SOURCES = [
-  { file: 'viewer_data/content_original.bvh', color: 0x4b8bf4 },
-  { file: 'viewer_data/style_a.bvh', color: 0x2e9e5b },
-  { file: 'viewer_data/style_b.bvh', color: 0xd4901e },
+  { file: 'viewer_data/content_original.bvh' },
+  { file: 'viewer_data/style_a.bvh' },
+  { file: 'viewer_data/style_b.bvh' },
 ];
 
-const panels = document.querySelectorAll('.panel');
-
-// 2026-07-26: 패널 4개(BVH 3개 + Mixamo 1개)가 각자 독립된 Clock으로, 각자 비동기 로드가
-// 끝나는 시점부터 재생을 시작했다 — Mixamo 쪽은 glTF(2MB)+BVH를 받아야 해서 로드가 더 늦게
-//끝나고, 그만큼 "시작 시각"이 달라 같은 콘텐츠(127_21)를 재생 중인데도 항상 몇 프레임씩
-// 어긋난 채로 보였다("자세/타이밍이 스켈레톤과 안 맞는다"는 피드백의 실제 원인). 그래서
-// 시계 하나(masterClock)와 렌더 루프 하나로 4개 패널의 mixer를 전부 같은 delta로 갱신하고,
-// 각 패널은 로드가 끝나는 순간 "그 시점의 masterClock 경과시간"으로 자기 mixer를 따라잡힌다.
-const masterClock = new THREE.Clock();
-const allMixers = [];
-const allRenderFns = [];
-
-SOURCES.forEach((src, i) => {
-  const panel = panels[i];
-
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0b0e14);
-  const grid = new THREE.GridHelper(300, 10, 0x2a3550, 0x1a2236);
-  scene.add(grid);
-  scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-  const dir = new THREE.DirectionalLight(0xffffff, 0.6);
-  dir.position.set(1, 2, 1);
-  scene.add(dir);
-
-  const camera = new THREE.PerspectiveCamera(45, 4 / 3, 1, 2000);
-  camera.position.set(120, 140, 220);
-
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(window.devicePixelRatio);
-  renderer.setSize(400, 300, false);
-  panel.appendChild(renderer.domElement);
-
-  const controls = new OrbitControls(camera, renderer.domElement);
-  controls.target.set(0, 80, 0);
-  controls.update();
-
-  // ponytail: BVH 파일마다 실제 단위(cm/inch/m)가 다를 수 있어 카메라 값을 고정하지
-  // 않고, 로드된 스켈레톤의 실측 바운딩 박스로 카메라·그리드를 자동 맞춘다.
-  function frameCameraToSkeleton(skeleton) {
-    const box = new THREE.Box3();
-    const p = new THREE.Vector3();
-    for (const bone of skeleton.bones) {
-      bone.getWorldPosition(p);
-      box.expandByPoint(p);
-    }
-    const size = box.getSize(new THREE.Vector3());
-    const center = box.getCenter(new THREE.Vector3());
-    const radius = Math.max(size.length() / 2, 1e-3);
-
-    grid.scale.setScalar(radius / 10); // 기본 그리드는 반경 10 기준으로 만들어짐
-    grid.position.set(center.x, box.min.y, center.z);
-
-    camera.position.set(center.x + radius * 1.6, center.y + radius * 1.2, center.z + radius * 2.2);
-    camera.near = radius / 100;
-    camera.far = radius * 100;
-    camera.updateProjectionMatrix();
-    controls.target.copy(center);
-    controls.update();
-  }
-
-  new BVHLoader().load(src.file, (result) => {
-    const skeletonHelper = new THREE.SkeletonHelper(result.skeleton.bones[0]);
-    skeletonHelper.skeleton = result.skeleton;
-    // SkeletonHelper 기본 재질은 vertexColors라 material.color 튜닝이 안 먹는다 — 꺼야 패널별 단색이 먹힌다.
-    skeletonHelper.material.vertexColors = false;
-    skeletonHelper.material.color.setHex(src.color);
-    skeletonHelper.material.linewidth = 2;
-
-    const boneContainer = new THREE.Group();
-    boneContainer.add(result.skeleton.bones[0]);
-
-    scene.add(skeletonHelper);
-    scene.add(boneContainer);
-
-    const mixer = new THREE.AnimationMixer(skeletonHelper);
-    mixer.clipAction(result.clip).setEffectiveWeight(1.0).play();
-    // 이 시점의 masterClock 경과시간만큼 먼저 따라잡아야 다른 패널과 같은 프레임에서 시작한다.
-    mixer.update(masterClock.getElapsedTime() + result.clip.duration / 2);
-    result.skeleton.bones[0].updateWorldMatrix(true, true);
-    frameCameraToSkeleton(result.skeleton);
-    allMixers.push(mixer);
-  });
-
-  allRenderFns.push(() => { controls.update(); renderer.render(scene, camera); });
-});
-
-// --- 4-1 검증: CMU-31 BVH 회전을 Mixamo(mixamorig) 스켈레톤으로 리타겟 ---
-// 소스 CMU(BVH) 관절 이름 -> 타겟 mixamorig 본 이름.
-//
-// 2026-07-26 재작성: Soldier.glb는 Z_UP -90°·100배 스케일·180° 베이크가 겹쳐 좌표프레임이
-// 엉망이라 어떤 리타겟 방법도 안 맞았다. Mixamo 기본 캐릭터 X Bot(FBX)로 교체하니 리그가
-// 깨끗했다(실측: Y-up, 힙 worldScale 1, 힙 회전 ≈ 항등, 오른팔 -X → CMU BVH와 방향 일치).
-// 프레임이 정렬되니 표준 local-delta 리타겟(ℓ = R_rest · Q_src)이 그대로 통한다.
-// FBXLoader도 콜론을 제거해 본 이름은 "mixamorigHips" 형태. X Bot에는 없는 관절(CMU LowerBack
-// 등)이나 CMU에 없는 관절(shoulder 등)은 매핑에서 빠져 각자 rest 유지.
+// 소스 CMU(BVH) 관절 이름 -> 타겟 mixamorig 본 이름. (근거는 커밋 이력·samsam_dev_spec.md 4-1)
 const CMU_TO_MIXAMO = {
   Hips: 'mixamorigHips',
   Spine: 'mixamorigSpine1', Spine1: 'mixamorigSpine2',
@@ -156,24 +60,10 @@ const CMU_TO_MIXAMO = {
   RightFoot: 'mixamorigRightFoot', RightToeBase: 'mixamorigRightToeBase',
 };
 
-// CMU 로컬 회전 Q_src(t)를 타겟 본의 로컬 회전으로 변환해 리타겟 클립을 만든다.
-//
-// 올바른 공식(2026-07-26 재도출):  ℓ_i(t) = A_parent(i)⁻¹ · Q_src_i(t) · A_i
-//   A_i          = 타겟 본 i의 rest 월드 누적 회전(= bone.getWorldQuaternion() at rest)
-//   A_parent(i)  = 타겟 본 i의 부모 본의 rest 월드 누적 회전
-//   Q_src_i(t)   = CMU 본 i의 로컬 회전(t)
-// 유도: CMU는 rest 로컬이 전부 항등이라 rest 월드도 전부 항등 → 소스의 "rest 대비 델타"가 곧
-// 절대 월드회전이 되고, 그걸 타겟 rest 월드 위에 얹어 다시 로컬로 되돌리면 위 식이 나온다.
-// Q=I(rest)면 ℓ = A_parent⁻¹·A_i = R_rest_local_i 로 줄어들어 rest 포즈를 정확히 재현한다.
-// (이전 버전은 ℓ = R_rest_local · Q 였는데, 이는 부모 누적회전 A_parent를 빠뜨려 팔·다리처럼
-//  부모가 항등이 아닌 사슬에서 전부 어긋났다 — "다리 꼬임/팔 휘적"의 실제 원인.)
-// kmByBone[mixamoBone] = { K: A_parent⁻¹, M: A_i } 는 로드 직후 실제 X Bot rest에서 계산.
-//
-// hipCfg = { restLocal: Vector3, scale: number } 를 주면 힙 이동(점프·전진) 트랙도 만든다.
-// X Bot과 CMU BVH가 둘 다 Y-up·같은 월드 방향(회전 dot=1.0로 확인)이라 축 스왑 없이
-// 성분 그대로 매핑: hipLocal(t) = restLocal + (bvhHip(t) - bvhHip(0)) · scale.
-// scale = X Bot 다리길이(cm) / CMU 다리길이(BVH단위) — 점프높이·보폭이 몸 크기에 비례하게.
-// 프레임0 기준 상대이동이라 "서 있는 위치"는 rest에 고정되고 그 위에서 점프·전진한다.
+// CMU 로컬 회전 Q_src(t) -> 타겟 로컬 회전.  ℓ_i(t) = A_parent(i)⁻¹ · Q_src_i(t) · A_i
+//   A_i = 타겟 본 i의 rest 월드 누적 회전.  (부모 누적회전 A_parent를 빠뜨리면 팔·다리가 어긋난다)
+// hipCfg = {restLocal, scale} 를 주면 힙 이동(점프·전진) 트랙도 만든다 — X Bot·CMU 둘 다 Y-up이라
+// 축 스왑 없이 성분 그대로:  hipLocal(t) = restLocal + (bvhHip(t) - bvhHip(0)) · scale.
 function buildRetargetClip(bvhClip, kmByBone, hipCfg) {
   const tracks = [];
   const qs = new THREE.Quaternion();
@@ -186,12 +76,11 @@ function buildRetargetClip(bvhClip, kmByBone, hipCfg) {
     const values = track.values.slice();
     for (let i = 0; i < values.length; i += 4) {
       qs.set(values[i], values[i + 1], values[i + 2], values[i + 3]);
-      const out = K.clone().multiply(qs).multiply(M); // ℓ = A_parent⁻¹ · Q · A_i
+      const out = K.clone().multiply(qs).multiply(M);
       values[i] = out.x; values[i + 1] = out.y; values[i + 2] = out.z; values[i + 3] = out.w;
     }
     tracks.push(new THREE.QuaternionKeyframeTrack(`${mixamoBone}.quaternion`, track.times, values));
   }
-
   if (hipCfg) {
     const hipTrack = bvhClip.tracks.find((t) => t.name === 'Hips.position');
     if (hipTrack) {
@@ -210,144 +99,139 @@ function buildRetargetClip(bvhClip, kmByBone, hipCfg) {
   return new THREE.AnimationClip('retargeted', bvhClip.duration, tracks);
 }
 
-(function setupMixamoPanel() {
-  const panel = document.querySelector('#mixamo-panel .panel');
+// rest 포즈만으로 리타겟 rig(kmByBone + hipCfg)를 계산. 3개 소스가 같은 CMU 골격이라 한 번만
+// 계산해 모든 캐릭터에 재사용한다(타겟 rest·소스 rest 모두 파일마다 동일).
+function computeRig(targetSkinned, srcSkeleton) {
+  const bones = {};
+  targetSkinned.skeleton.bones.forEach((b) => { bones[b.name] = b; });
+  targetSkinned.skeleton.bones[0].updateWorldMatrix(true, true);
+  const srcBones = {};
+  srcSkeleton.bones.forEach((b) => { srcBones[b.name] = b; });
+  srcSkeleton.bones[0].updateWorldMatrix(true, true);
+  const MIXAMO_TO_CMU = {};
+  for (const [c, m] of Object.entries(CMU_TO_MIXAMO)) MIXAMO_TO_CMU[m] = c;
+
+  // T-pose 방향 정렬: 각 사지 본의 rest 월드 방향(부모→자식)을 소스에 맞추는 최소회전.
+  // (X Bot rest 다리가 CMU보다 ~20° 벌어져 무릎이 안쪽으로 꼬이던 걸 없앤다)
+  const DIR_CHILD = {
+    mixamorigLeftUpLeg: 'mixamorigLeftLeg', mixamorigLeftLeg: 'mixamorigLeftFoot', mixamorigLeftFoot: 'mixamorigLeftToeBase',
+    mixamorigRightUpLeg: 'mixamorigRightLeg', mixamorigRightLeg: 'mixamorigRightFoot', mixamorigRightFoot: 'mixamorigRightToeBase',
+    mixamorigLeftArm: 'mixamorigLeftForeArm', mixamorigLeftForeArm: 'mixamorigLeftHand',
+    mixamorigRightArm: 'mixamorigRightForeArm', mixamorigRightForeArm: 'mixamorigRightHand',
+  };
+  const worldDir = (a, b) => b.getWorldPosition(new THREE.Vector3()).sub(a.getWorldPosition(new THREE.Vector3())).normalize();
+  const alignByBone = {};
+  for (const [mName, mChild] of Object.entries(DIR_CHILD)) {
+    const tBone = bones[mName], tChild = bones[mChild];
+    const sName = MIXAMO_TO_CMU[mName], sChild = MIXAMO_TO_CMU[mChild];
+    if (!tBone || !tChild || !srcBones[sName] || !srcBones[sChild]) continue;
+    alignByBone[mName] = new THREE.Quaternion().setFromUnitVectors(worldDir(tBone, tChild), worldDir(srcBones[sName], srcBones[sChild]));
+  }
+  const Mworld = {};
+  targetSkinned.skeleton.bones.forEach((b) => {
+    const A = b.getWorldQuaternion(new THREE.Quaternion());
+    const al = alignByBone[b.name];
+    Mworld[b.name] = al ? al.clone().multiply(A) : A;
+  });
+  const kmByBone = {};
+  for (const mName of Object.values(CMU_TO_MIXAMO)) {
+    const bone = bones[mName];
+    if (!bone) continue;
+    const parentM = (bone.parent && Mworld[bone.parent.name]) ? Mworld[bone.parent.name] : new THREE.Quaternion();
+    kmByBone[mName] = { K: parentM.clone().invert(), M: Mworld[mName].clone() };
+  }
+
+  // 힙 이동 스케일 = X Bot 다리길이(cm) / CMU 다리길이(BVH단위). worldScale(0.01)로 cm 복원.
+  const legLen = (map, up, lo, ft) =>
+    map[up].getWorldPosition(new THREE.Vector3()).distanceTo(map[lo].getWorldPosition(new THREE.Vector3())) +
+    map[lo].getWorldPosition(new THREE.Vector3()).distanceTo(map[ft].getWorldPosition(new THREE.Vector3()));
+  const ws = new THREE.Vector3();
+  bones['mixamorigHips'].getWorldScale(ws);
+  const xbotLegCm = legLen(bones, 'mixamorigRightUpLeg', 'mixamorigRightLeg', 'mixamorigRightFoot') / (ws.x || 1);
+  const bvhLeg = legLen(srcBones, 'RightUpLeg', 'RightLeg', 'RightFoot');
+  const hipCfg = { restLocal: bones['mixamorigHips'].position.clone(), scale: xbotLegCm / bvhLeg };
+  return { kmByBone, hipCfg };
+}
+
+const masterClock = new THREE.Clock();
+const allMixers = [];
+const allRenderFns = [];
+
+function setupCharacterPanel(panelEl, xbotTemplate, rig, bvhResult) {
+  const character = cloneSkinned(xbotTemplate); // 자체 스켈레톤을 가진 깊은 복제
+  character.scale.setScalar(0.01); // cm → m
+  const skinned = character.getObjectByProperty('type', 'SkinnedMesh');
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0b0e14);
-  const grid = new THREE.GridHelper(4, 10, 0x2a3550, 0x1a2236);
+  scene.background = new THREE.Color(0x0d111a);
+  scene.add(new THREE.HemisphereLight(0xdfe7f5, 0x2a2f3a, 2.4));
+  const key = new THREE.DirectionalLight(0xffffff, 2.2); key.position.set(1.5, 3, 2.5); scene.add(key);
+  const fill = new THREE.DirectionalLight(0x9db4d8, 1.0); fill.position.set(-2, 1, 1.5); scene.add(fill);
+  const grid = new THREE.GridHelper(4, 12, 0x2c3a56, 0x18202e);
   scene.add(grid);
-  scene.add(new THREE.AmbientLight(0xffffff, 0.9));
-  const dir = new THREE.DirectionalLight(0xffffff, 0.7);
-  dir.position.set(1, 2, 1.5);
-  scene.add(dir);
+  scene.add(character);
 
-  const camera = new THREE.PerspectiveCamera(45, 4 / 3, 0.01, 100);
+  const camera = new THREE.PerspectiveCamera(42, 3 / 4, 0.01, 100);
   const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(window.devicePixelRatio);
-  renderer.setSize(400, 300, false);
-  panel.appendChild(renderer.domElement);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(360, 480, false);
+  panelEl.appendChild(renderer.domElement);
   const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enablePan = false;
 
-  new FBXLoader().load('viewer_data/xbot.fbx', (fbx) => {
-    // X Bot는 cm 단위(키 ~180) → 0.01로 축소해 미터 단위 씬에 맞춘다.
-    fbx.scale.setScalar(0.01);
-    scene.add(fbx);
-    fbx.updateMatrixWorld(true);
-    const skinned = fbx.getObjectByProperty('type', 'SkinnedMesh');
-    const bones = {};
-    skinned.skeleton.bones.forEach((b) => { bones[b.name] = b; });
-    skinned.skeleton.bones[0].updateWorldMatrix(true, true);
+  character.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(character);
+  const center = box.getCenter(new THREE.Vector3());
+  const height = Math.max(box.max.y - box.min.y, 0.1);
+  grid.position.set(center.x, box.min.y, center.z);
+  camera.position.set(center.x, center.y + height * 0.12, center.z + height * 2.3);
+  camera.near = height / 100; camera.far = height * 200;
+  camera.updateProjectionMatrix();
+  controls.target.set(center.x, center.y, center.z);
+  controls.update();
 
-    // 카메라: 서 있는 캐릭터(발~머리 ~1.8m)를 정면에서 담는다(제자리 재생이라 고정).
-    const box = new THREE.Box3().setFromObject(fbx);
-    const center = box.getCenter(new THREE.Vector3());
-    const height = Math.max(box.max.y - box.min.y, 0.1);
-    grid.position.set(center.x, box.min.y, center.z);
-    camera.position.set(center.x, center.y + height * 0.15, center.z + height * 2.6);
-    camera.near = height / 100;
-    camera.far = height * 100;
-    camera.updateProjectionMatrix();
-    controls.target.set(center.x, center.y, center.z);
-    controls.update();
+  const clip = buildRetargetClip(bvhResult.clip, rig.kmByBone, rig.hipCfg);
+  const mixer = new THREE.AnimationMixer(character);
+  mixer.clipAction(clip).play();
+  mixer.update(masterClock.getElapsedTime()); // 패널 간 시각 동기화
+  allMixers.push(mixer);
 
-    new BVHLoader().load('viewer_data/style_a.bvh', (bvhResult) => {
-      // === T-pose 방향 정렬 (2026-07-26) ===
-      // K/M 공식만으론 팔은 완벽(dot=1.0)했지만 다리는 dot≈0.94(~20°) — X Bot rest 다리가
-      // CMU보다 벌어져 있어서다. 그 20° 차이가 무릎 굽힘 평면을 돌려 다리가 겹쳤다. 그래서
-      // 각 사지 본의 "rest 월드 방향(부모→자식)"을 소스에 맞추는 최소회전 align_i를 구해
-      //   M_i = align_i · A_tgt_i   (rest 방향을 소스와 일치시킴, 팔은 align≈항등이라 그대로)
-      // 로 바꾼다. K_i = M[부모]⁻¹.
-      const srcBones = {};
-      bvhResult.skeleton.bones.forEach((b) => { srcBones[b.name] = b; });
-      bvhResult.skeleton.bones[0].updateWorldMatrix(true, true);
-      const MIXAMO_TO_CMU = {};
-      for (const [c, m] of Object.entries(CMU_TO_MIXAMO)) MIXAMO_TO_CMU[m] = c;
-      // 방향 정의용 자식(타겟 본 → 그 사지 방향을 정하는 자식 본)
-      const DIR_CHILD = {
-        mixamorigLeftUpLeg: 'mixamorigLeftLeg', mixamorigLeftLeg: 'mixamorigLeftFoot', mixamorigLeftFoot: 'mixamorigLeftToeBase',
-        mixamorigRightUpLeg: 'mixamorigRightLeg', mixamorigRightLeg: 'mixamorigRightFoot', mixamorigRightFoot: 'mixamorigRightToeBase',
-        mixamorigLeftArm: 'mixamorigLeftForeArm', mixamorigLeftForeArm: 'mixamorigLeftHand',
-        mixamorigRightArm: 'mixamorigRightForeArm', mixamorigRightForeArm: 'mixamorigRightHand',
-      };
-      const worldDir = (boneA, boneB) => {
-        const pa = boneA.getWorldPosition(new THREE.Vector3());
-        const pb = boneB.getWorldPosition(new THREE.Vector3());
-        return pb.sub(pa).normalize();
-      };
-      const alignByBone = {}; // mixamoBone -> align_i (없으면 항등)
-      for (const [mName, mChild] of Object.entries(DIR_CHILD)) {
-        const tBone = bones[mName], tChild = bones[mChild];
-        const sName = MIXAMO_TO_CMU[mName], sChild = MIXAMO_TO_CMU[mChild];
-        if (!tBone || !tChild || !srcBones[sName] || !srcBones[sChild]) continue;
-        const tgtDir = worldDir(tBone, tChild);
-        const srcDir = worldDir(srcBones[sName], srcBones[sChild]);
-        alignByBone[mName] = new THREE.Quaternion().setFromUnitVectors(tgtDir, srcDir);
-      }
-      // M[bone] = align · A_tgt (모든 본; align 없으면 A_tgt 그대로)
-      const Mworld = {};
-      skinned.skeleton.bones.forEach((b) => {
-        const A = b.getWorldQuaternion(new THREE.Quaternion());
-        const align = alignByBone[b.name];
-        Mworld[b.name] = align ? align.clone().multiply(A) : A;
-      });
-      const kmByBone = {};
-      for (const mName of Object.values(CMU_TO_MIXAMO)) {
-        const bone = bones[mName];
-        if (!bone) continue;
-        const M = Mworld[mName].clone();
-        const parentM = (bone.parent && Mworld[bone.parent.name]) ? Mworld[bone.parent.name] : new THREE.Quaternion();
-        kmByBone[mName] = { K: parentM.clone().invert(), M };
-      }
-
-      // 힙 이동(점프·전진) 스케일 = X Bot 다리길이 / CMU 다리길이. 둘 다 각자의 rest 월드
-      // 거리로 재되, X Bot 월드는 fbx.scale(0.01)이 곱해져 있으니 힙 로컬(cm) 단위로 되돌린다.
-      const legLen = (map, up, lo, ft) =>
-        map[up].getWorldPosition(new THREE.Vector3()).distanceTo(map[lo].getWorldPosition(new THREE.Vector3())) +
-        map[lo].getWorldPosition(new THREE.Vector3()).distanceTo(map[ft].getWorldPosition(new THREE.Vector3()));
-      const xbotLegCm = legLen(bones, 'mixamorigRightUpLeg', 'mixamorigRightLeg', 'mixamorigRightFoot') / 0.01;
-      const bvhLeg = legLen(srcBones, 'RightUpLeg', 'RightLeg', 'RightFoot');
-      const hipCfg = {
-        restLocal: bones['mixamorigHips'].position.clone(),
-        scale: xbotLegCm / bvhLeg,
-      };
-
-      const clip = buildRetargetClip(bvhResult.clip, kmByBone, hipCfg);
-      const mixer = new THREE.AnimationMixer(fbx);
-      mixer.clipAction(clip).play();
-      mixer.update(masterClock.getElapsedTime()); // 다른 패널과 시각 동기화
-      allMixers.push(mixer);
-      hipBone = bones['mixamorigHips'];
-    });
-  });
-
-  // 캐릭터가 전진(~6.8m)하므로 카메라가 힙의 수평 이동을 따라간다 — 캐릭터는 프레임에 크게
-  // 유지되고, 그리드가 뒤로 흘러 전진이 보이며, 점프(수직)는 프레임 안에서 그대로 보인다.
-  // target/카메라를 같은 델타로 옮겨 OrbitControls 드래그 회전은 그대로 유지.
-  let hipBone = null;
-  const prevHip = new THREE.Vector3();
-  let hipInit = false;
-  const curHip = new THREE.Vector3();
+  // 캐릭터가 전진(~6.8m)하므로 카메라가 힙 수평 이동을 따라간다(점프는 프레임 안에서 보임).
+  const hipBone = skinned.skeleton.bones.find((b) => b.name === 'mixamorigHips');
+  const cur = new THREE.Vector3(), prev = new THREE.Vector3();
+  let inited = false;
   allRenderFns.push(() => {
     if (hipBone) {
-      hipBone.getWorldPosition(curHip);
-      if (!hipInit) { prevHip.copy(curHip); hipInit = true; }
-      const dx = curHip.x - prevHip.x, dz = curHip.z - prevHip.z; // 수평만 추적(점프는 프레임 안에서 보이게)
+      hipBone.getWorldPosition(cur);
+      if (!inited) { prev.copy(cur); inited = true; }
+      const dx = cur.x - prev.x, dz = cur.z - prev.z;
       camera.position.x += dx; camera.position.z += dz;
       controls.target.x += dx; controls.target.z += dz;
-      prevHip.copy(curHip);
+      prev.copy(cur);
     }
     controls.update();
     renderer.render(scene, camera);
   });
-})();
+}
 
-// 4개 패널 전부를 하나의 delta로 갱신 — 로드 완료 시점이 서로 달라도 동기화가 유지된다.
+Promise.all([
+  new Promise((res) => new FBXLoader().load('viewer_data/xbot.fbx', res)),
+  ...SOURCES.map((s) => new Promise((res) => new BVHLoader().load(s.file, res))),
+]).then(([xbot, ...bvhResults]) => {
+  xbot.updateMatrixWorld(true);
+  const templateSkinned = xbot.getObjectByProperty('type', 'SkinnedMesh');
+  // rig는 rest만 쓰므로 한 번 계산해 3패널 공유(모두 같은 CMU 골격·같은 X Bot rest).
+  const rig = computeRig(templateSkinned, bvhResults[0].skeleton);
+
+  const panels = document.querySelectorAll('#panels .panel');
+  SOURCES.forEach((s, i) => setupCharacterPanel(panels[i], xbot, rig, bvhResults[i]));
+});
+
 function animate() {
   requestAnimationFrame(animate);
   const delta = masterClock.getDelta();
   allMixers.forEach((m) => m.update(delta));
-  allRenderFns.forEach((render) => render());
+  allRenderFns.forEach((r) => r());
 }
 animate();
 </script>

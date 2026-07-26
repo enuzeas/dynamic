@@ -85,7 +85,7 @@ styled CMU-BVH의 회전을 Mixamo 휴머노이드에 입히는 리타겟. **사
 | 4-0a | **`hmr4d_to_npz.py` — 작성·검증 완료(2026-07-25)** | — (smpl2bvh는 버그·불필요로 폐기, 위 절 참고) | GVHMR/FootMR `hmr4d_results.pt`(`smpl_params_global`) → SMPL 24관절 축각 npz(`test_hmr4d_to_npz.py`로 합성 데이터 왕복 + Motion Puzzle 통합까지 검증) |
 | 4-0b | **`retarget_smpl_to_cmu.py` — 작성·검증 완료(2026-07-23)** | SMPL 24관절 축각 → CMU 원본 31관절 BVH(`--content` 입력용) | 합성 데이터로 왕복 검증 + **실제 Motion Puzzle `test.py --content`에 먹여서 스타일 전이 출력까지 확인**(`test_retarget_smpl_to_cmu.py`). 21관절로 줄여 저장하면 `process_data()`의 고정 인덱스가 깨진다는 걸 실패로 먼저 확인 → 31관절 원본 구조(10개 무해 관절은 항등회전)로 재작성해서 해결 |
 | 4-1 | **`samsam_viewer.html`에 통합 — 회전+힙이동 완료·검증(2026-07-26)** | `viewer_data/xbot.fbx`(Mixamo X Bot, `FBXLoader`) | CMU BVH 회전 → 이름 매핑 + `ℓ=A_parent⁻¹·Q·A_i` + T-pose 방향 정렬(align) → mixamorig 구동, **전 관절 dot=1.0**. 힙 이동(점프·전진) 트랙도 추가(축 스왑 없이 성분 매핑, 카메라 수평 추적). 발 고정만 남음 |
-| 5 | `samsam_viewer.html` (신규, 프로젝트 폴더 아니라 단일 파일 — 빌드 없는 정적 사이트 컨벤션 유지) | 없음 — `reports/viewer.html`은 마크다운 리포트 뷰어, `index.html`/`mvp.html`은 2D MVP라 3D 스켈레톤과 무관 | BVH 3패널(원본/스타일A/스타일B) + Mixamo 캐릭터(X Bot) 리타겟 검증 패널 1개, 총 4패널. **2026-07-26: 4-1 회전 리타겟 완성으로 Mixamo 스킨 패널이 스켈레톤과 관절 방향까지 일치(dot=1.0).** 3패널은 여전히 BVH 스켈레톤 직접 표시 |
+| 5 | `samsam_viewer.html` (신규, 프로젝트 폴더 아니라 단일 파일 — 빌드 없는 정적 사이트 컨벤션 유지) | 없음 — `reports/viewer.html`은 마크다운 리포트 뷰어, `index.html`/`mvp.html`은 2D MVP라 3D 스켈레톤과 무관 | **2026-07-26 데모 뷰어로 완성**: 3패널 모두 X Bot 캐릭터(스켈레톤 아님) — 원본 콘텐츠(127_21)/스타일 A/스타일 B를 같은 캐릭터에 리타겟해 "같은 동작, 다른 스타일"을 before/after로 비교. `SkeletonUtils.clone`으로 캐릭터 3개 복제, 리타겟 rig(km+align+hip)는 `computeRig()`로 한 번 계산해 공유, `masterClock`로 동기화, 패널별 힙 수평 추적 카메라 |
 | 6-2 | `evaluate_icc.py` (신규 — ICC 구현이 코드베이스에 전혀 없음, 확인함) | `analyze.py`의 DTW | styled BVH 여러 개 → ICC 계수 |
 
 ---
