@@ -14,6 +14,8 @@
   select { background: #121826; color: #e8ecf5; border: 1px solid #263050; border-radius: 7px; padding: 7px 10px; font-size: 0.85rem; min-width: 150px; }
   button { background: #3dd7b8; color: #04231c; border: none; border-radius: 7px; padding: 9px 18px; font-size: 0.88rem; font-weight: 700; cursor: pointer; }
   button:disabled { background: #2a3550; color: #6a7a99; cursor: default; }
+  .upbtn { display: inline-block; background: #182236; border: 1px solid #2c3a56; color: #b8c6e0; border-radius: 7px; padding: 8px 12px; font-size: 0.82rem; cursor: pointer; }
+  .upbtn:hover { border-color: #3dd7b8; color: #e8ecf5; }
   .status { font-size: 0.78rem; color: #9aa9c4; min-height: 1.1em; align-self: center; }
   .status.err { color: #ff8a8a; }
   .note { text-align: center; font-size: 0.72rem; color: #55617a; margin: -6px 0 10px; }
@@ -32,9 +34,10 @@
   <div class="ctl"><label for="content">콘텐츠 모션 (무엇을 하는가)</label><select id="content"></select></div>
   <div class="ctl"><label for="style">레퍼런스 스타일 (어떤 결로)</label><select id="style"></select></div>
   <button id="run">스타일 전이 실행</button>
+  <div class="ctl"><label>커스텀 BVH</label><label class="upbtn" for="upload">＋ 업로드<input id="upload" type="file" accept=".bvh" hidden></label></div>
   <div class="status" id="status"></div>
 </div>
-<p class="note">영상 → 모션(BVH) 변환은 GVHMR(Colab GPU) 단계입니다. 여기선 그 결과·레퍼런스 BVH를 입력으로 씁니다.</p>
+<p class="note">영상 → 모션(BVH) 변환은 GVHMR(Colab GPU) 단계입니다. 여기선 그 결과·레퍼런스 BVH(CMU 형식, `retarget_smpl_to_cmu.py` 출력)를 입력으로 씁니다.</p>
 <div class="row" id="panels">
   <div class="panel"><h2>콘텐츠<span class="tag" id="content-tag">—</span></h2></div>
   <div class="panel"><h2>레퍼런스 스타일<span class="tag" id="style-tag">—</span></h2></div>
@@ -221,7 +224,7 @@ function stem(name) { return name.replace(/\.bvh$/, ''); }
 Promise.all([
   new Promise((res) => new FBXLoader().load('viewer_data/xbot.fbx', res)),
   fetch('/api/sources').then((r) => r.json()),
-]).then(([xbot, { sources }]) => {
+]).then(([xbot, { sources, uploads = [] }]) => {
   xbot.updateMatrixWorld(true);
   const templateSkinned = xbot.getObjectByProperty('type', 'SkinnedMesh');
   if (!sources.length) { setStatus('입력 BVH가 없습니다 (external/motion_puzzle/datasets/cmu/test_bvh 확인)', true); return; }
@@ -244,13 +247,24 @@ Promise.all([
   const urlByName = {};
   for (const s of sources) urlByName[s.name] = s.url;
 
+  // 업로드 목록은 재구성 가능하게 배열로 유지(업로드 시 추가 후 드롭다운 다시 채움)
+  const uploaded = uploads.slice(); // [{name,url}]
+
   function fillSelect(sel) {
+    const keep = sel.value;
+    sel.textContent = '';
+    if (uploaded.length) {
+      const gu = document.createElement('optgroup'); gu.label = '내 업로드';
+      for (const u of uploaded) gu.appendChild(new Option(stem(u.name), u.url));
+      sel.appendChild(gu);
+    }
     const g1 = document.createElement('optgroup'); g1.label = '추천 동작 (이름)';
     for (const c of CURATED) if (urlByName[c.f]) g1.appendChild(new Option(`${c.ko} — ${c.en}`, urlByName[c.f]));
     sel.appendChild(g1);
     const g2 = document.createElement('optgroup'); g2.label = '전체 (CMU ID)';
     for (const s of sources) g2.appendChild(new Option(stem(s.name), s.url));
     sel.appendChild(g2);
+    if (keep) sel.value = keep;
   }
   fillSelect(contentSel); fillSelect(styleSel);
   // 기본 데모 페어: "걷기"에 "닭 흉내" 스타일 — 결 차이가 가장 눈에 띄는 조합
@@ -281,6 +295,26 @@ Promise.all([
     styleSel.onchange = loadStyle;
     loadContent(); loadStyle();
     setStatus('준비됨 — 콘텐츠·스타일을 고르고 실행하세요.');
+
+    // BVH 업로드: 촬영→GVHMR→retarget_smpl_to_cmu.py로 만든 CMU-BVH를 콘텐츠로 바로 투입.
+    document.getElementById('upload').onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      setStatus(`업로드 중… ${file.name}`);
+      try {
+        const r = await fetch('/api/upload?name=' + encodeURIComponent(file.name), { method: 'POST', body: file });
+        const j = await r.json();
+        if (!r.ok) throw new Error(j.error || '업로드 실패');
+        if (!uploaded.some((u) => u.name === j.name)) uploaded.push({ name: j.name, url: j.url });
+        fillSelect(contentSel); fillSelect(styleSel);   // '내 업로드' 그룹 갱신
+        contentSel.value = j.url; loadContent();          // 업로드본을 콘텐츠로 설정(스타일로도 선택 가능)
+        setStatus(`업로드 완료 — "${stem(j.name)}"를 콘텐츠로 설정. 스타일로도 쓸 수 있어요.`);
+      } catch (err) {
+        setStatus('업로드 오류: ' + err.message, true);
+      } finally {
+        e.target.value = '';  // 같은 파일 다시 업로드 가능하게
+      }
+    };
   });
 });
 
