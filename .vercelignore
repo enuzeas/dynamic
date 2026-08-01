@@ -1,15 +1,31 @@
+# .vercelignore가 있으면 .gitignore는 무시된다 — 무거운 것은 전부 여기서 막아야 한다.
+# (external/ 하나가 20GB. 이게 빠져 있어서 지금까지 배포가 위험했다)
+# gitignore 문법이라 주석은 줄 맨 앞에만.
+external/
+google-cloud-sdk/
+*.tar.gz
+SMPL/
+.venv*
+models/
+sample_dance*/
+__pycache__
 *.MOV
 *.mov
 *.task
-__pycache__
-.venv
 *.py
 *.m
-doc/
-mvp.html
-analysis_output.png
+*.ipynb
 *.pdf
 *.pptx
-models/
-sample/
-sample_dance*/
+.DS_Store
+
+# 배포 제외 페이지
+# mvp.html: report.html의 절대경로 복제본
+# style_transfer.html: /api/transfer(conda+PyTorch) 필요 → 로컬 전용
+mvp.html
+style_transfer.html
+
+# doc/은 그림만 올린다 (페이지가 doc/*.png를 참조)
+doc/*.md
+doc/*.jpeg
+doc/*.mp4
