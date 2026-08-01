@@ -10,12 +10,12 @@
 
 | 구성요소 | 채택할 검증된 기술 | 소스 |
 |---|---|---|
-| SM-SGE (스켈레톤 인코더) | ST-GCN / 2s-AGCN 계열 skeleton graph 인코딩 | Yan et al. 2018 (ST-GCN), NTU RGB+D 사전학습 가중치 재사용 |
-| SA-PMT (스타일 전송) | Skeleton-aware motion retargeting / style transfer | Aberman et al. 2020, "Skeleton-Aware Networks for Deep Motion Retargeting" (SIGGRAPH) — 오픈소스 구현 존재 |
-| PMSR (물리 정규화 손실) | bone-length invariance, joint-limit, foot-contact 손실 | 위 Aberman et al. 및 동종 리타겟팅 논문에서 이미 쓰는 손실 항 그대로 채택 |
+| SM-SGE (스켈레톤 인코더 + 정제) | Motion Puzzle `Encoder_sty`(고정, 재학습 없음) 특징을 뽑아, 그 위에 Triplet Loss(Batch Hard, P명×K클립 배치) 정제 헤드를 얹음 | Jang et al. 2022 "Motion Puzzle"(이미 채택·실행 확인, `external/motion_puzzle`) + gait 논문(Zheng et al., arXiv:2111.11720)의 학습 방식 차용 — 처음 계획한 ST-GCN 처음부터 학습은 보류, 기존 특징 위 얕은 헤드로 우선 시도. **구현 후보(2026-08-01 조사)**: Zheng et al. 논문 자체는 코드 미공개(CASIA-B, ST-GCN, GitHub 확인 안 됨) → 직접 구현 대상 아님. Batch Hard+P×K 원조인 Hermans et al. 2017("In Defense of the Triplet Loss")의 참고 구현([CoinCheung](https://github.com/CoinCheung/triplet-reid-pytorch)/[kilianyp](https://github.com/kilianyp/triplet-reid-pytorch) triplet-reid-pytorch)은 손실 수식 확인용으로만 참고, 포크 대상 아님(오래됨·미관리). 실제 채택 후보는 **`pytorch-metric-learning`**(pip 설치, `miners.BatchHardMiner`+`losses.TripletMarginLoss`로 P×K 마이닝+로스 몇 줄에 해결, 유지보수됨) — `motion_puzzle`/`mcmldm` conda env 둘 다 미설치 확인, `pip install pytorch-metric-learning` 필요 |
+| SA-PMT (스타일 전송) | **Motion Puzzle**(신체 부위별 AdaIN + attention) | Jang et al. 2022, ACM TOG — 실측 ~9초/쌍(`samsam_dev_spec.md` 89행). ~~Aberman et al. skeleton-aware retargeting~~은 리타겟팅 용도로만 검토했다가 이름 고정 24개 Mixamo 캐릭터 한정이라 폐기(`samsam_dev_spec.md`) — 스타일 전송 자체엔 애초에 쓴 적 없음 |
+| PMSR (물리 정규화 손실) | Motion Puzzle이 이미 대부분 내장: 그래프 컨볼루션이 스켈레톤 토폴로지를 바꾸지 않아 `L_bone` 문제가 원천적으로 없고, `loss_sm_rec`/`loss_sm_cyc`(프레임 차분 L1)가 `L_jerk` 역할, `remove_fs.remove_foot_sliding()`이 `L_contact` 역할 — **별도 손실 함수를 새로 설계할 필요가 사라짐.** `L_limit`(관절 가동범위)만 미검증 잔여 리스크 | `external/motion_puzzle/trainer.py`(`compute_gen_loss`), `remove_fs.py` 코드 확인 |
 | Sigma-Lognormal Model | kinematic theory of rapid human movements | Plamondon — 기존 오픈 구현체(SLM 툴박스) 재사용 |
 | IKC | 표준 평균 궤적 대비 개인 편차 | 신규 지표 — 통계 계산이라 구현 난이도 낮음, 검증은 필요 |
-| ICC | 급내상관계수 | `analyze.py`에 이미 구현됨 |
+| ICC | 급내상관계수 | `evaluate_icc.py::icc_3_1()`에 이미 구현됨(2026-07-25) — 현재 8관절 속도곡선(식별 트랙)에만 적용 중, SM-SGE 임베딩엔 배선만 하면 됨 |
 
 심사·특허 문서에는 위 우측 컬럼(실제 논문·라이브러리명)으로 인용한다. 좌측은 이 프로젝트 내부에서 부르는 이름.
 
@@ -26,28 +26,45 @@
 새 알고리즘을 발명하는 게 아니라 검증된 오픈소스를 조립하는 작업이므로, Layer 1의 "다이내믹스 서명이 존재하는가"라는 명제 검증과 별개로 진행할 수 있다:
 
 - **스켈레톤 인코더·리타겟팅·물리 손실** 모두 사전학습 가중치나 참조 구현이 공개돼 있어, 처음부터 학습 데이터를 모으지 않아도 파일럿이 가능하다 (사전학습 모델에 지금 가진 8–12명 × 5회 데이터를 얹어 fine-tune/평가하는 정도로 시작).
-- 3D 스켈레톤 추정도 MediaPipe Pose의 3D world landmark 출력을 그대로 쓰면 되고(현재 `demo.py`는 2D 옵티컬 플로우만 쓰고 있어 이 부분이 첫 업그레이드 지점), 별도 3D 복원 모델을 새로 학습할 필요는 없다.
+- 3D 스켈레톤 추정은 이 문서 작성 시점엔 "MediaPipe 3D world landmark로 교체" 계획이었으나, 실행 검증 후 **GVHMR+FootMR**(Colab T4)로 대체 확정됐다 — 정확도·world-grounded 지표에서 MediaPipe보다 우세(`samsam_plan.md` 76행). `hmr4d_to_npz.py`가 그 출력을 SM-SGE 입력용 npz로 변환하는 것까지 작성·검증 완료(2026-07-25).
 - 다만 "스타일 벡터가 실제로 개인 고유 자산인가"라는 **IP 주장의 강도**는 Layer 1 지표로 뒷받침되는 게 맞다 — 파이프라인 구축 자체는 지금 해도 되지만, 특허/계약 문서에 "고유 자산"이라고 쓸 때는 rank-1/EER 숫자를 근거로 붙인다.
 
 ---
 
-## 3. 파이프라인 아키텍처
+## 3. 파이프라인 아키텍처 (2026-08-01 실제 구현 기준으로 갱신)
 
 ```
-[영상] → [3D 스켈레톤 추정] → SM-SGE 인코더 → 스타일 벡터 z_style (Motion IP 자산 후보)
-                                                      │
-                          [타겟 모션 골격] ──→ SA-PMT 전송 ──→ [스타일 이식된 모션]
-                                                      │
-                                        PMSR 손실로 학습 안정화 (아래 4장)
+[영상] → GVHMR+FootMR(2D→3D, Colab T4, 필수) → hmr4d_to_npz.py → retarget_smpl_to_cmu.py
+       → [CMU BVH, K개 동작 클립 × 사람마다]
+                │
+                ▼
+       Motion Puzzle Encoder_sty (고정, 재학습 없음)
+                │  클립마다 5부위(다리L/R·척추·팔L/R) × 4스케일 특징
+                ▼
+       시간축 풀링 → 클립별 고정 벡터
+                │
+                ▼
+       SM-SGE 정제 헤드 (신규 학습 — Triplet Loss, Batch Hard, P명×K클립)
+                │
+                ▼
+       K개 임베딩 평균(centroid) = z_style (Motion IP 자산 후보)
+                │                                    │
+                │                      evaluate_icc.py::icc_3_1()로 반복촬영 간 일관성 검증
+                ▼
+       [타겟 모션 BVH] ──→ Motion Puzzle Decoder(BP-AdaIN+attention, SA-PMT) ──→ [스타일 이식된 모션]
+                │
+       remove_fs.remove_foot_sliding() + loss_sm_* (PMSR 역할, 아래 4장)
 ```
 
-- **인코더(SM-SGE)**: 스켈레톤 그래프를 관절(노드)·본(엣지)으로 표현, 다중 시간 스케일(프레임 단위 미세 저크 / 동작 단위 리듬)로 self-supervised 인코딩. 콘텐츠(동작 종류)와 스타일(개인 서명)을 분리하는 것이 핵심 — `BIO-IP_통합문서.md` "스타일·콘텐츠 분리" 절과 동일한 문제.
-- **전송기(SA-PMT)**: 타겟 모션의 의미(어떤 동작인지)는 보존하고, 인코딩된 스타일 벡터를 주입해 "그 사람처럼 하는 같은 동작"을 생성.
-- **정규화(PMSR)**: 스타일 이식 과정에서 골격이 늘어나거나 관절이 꺾이는 등 물리적으로 불가능한 왜곡을 손실 함수로 억제.
+- **인코더(SM-SGE)**: Motion Puzzle의 `Encoder_sty`를 그대로 특징 추출기로 재사용(콘텐츠 인코더는 InstanceNorm으로 통계를 지우고 스타일 인코더는 안 지우는 구조로 이미 "동작 종류 대 통계적 스타일"을 어느 정도 분리함). 다만 이건 **클립 1개짜리** 통계일 뿐 "여러 다른 동작에 걸친 개인 불변 성분"은 아니라서, 그 위에 Triplet Loss 기반 정제 헤드를 새로 얹는 게 이 프로젝트의 실질적 신규 기여 지점(`professor_review_status.md` 4번 항목).
+- **전송기(SA-PMT)**: Motion Puzzle `Decoder` — 신체 부위별 AdaIN(통계 이식) + attention(국소 패턴 이식)을 4단계 해상도에서 반복 적용. 원래 검토했던 Aberman skeleton-aware retargeting은 이 역할로 쓴 적 없음(리타겟팅 서브 문제에만 검토 후 폐기).
+- **정규화(PMSR)**: Motion Puzzle 자체 손실(재구성+순환일관성+평활)과 `remove_fs`가 대부분 커버 — 아래 4장 참고.
 
 ---
 
 ## 4. PMSR 손실 함수 정의
+
+**갱신(2026-08-01)**: Motion Puzzle을 그대로 채택하면서 아래 손실 대부분을 새로 짤 필요가 없어졌다 — `L_bone`은 스켈레톤 토폴로지를 안 바꾸는 그래프 컨볼루션 구조상 원천적으로 문제가 안 생기고, `L_jerk`는 `loss_sm_rec`/`loss_sm_cyc`, `L_contact`는 `remove_fs.remove_foot_sliding()`이 이미 대신한다(1장 표 참고). 아래 정의는 **`L_limit`처럼 아직 안 커버되는 항이 실제로 필요해질 경우를 위한 참고 정의**로 남겨둔다 — 지금 당장 구현 우선순위는 아니다.
 
 물리적 개연성을 강제하는 항의 가중합으로 정의한다. 개별 항은 리타겟팅/모션 합성 연구에서 흔히 쓰는 정규화를 이 프로젝트 맥락에 맞춘 것이다.
 
@@ -77,16 +94,18 @@ L_total = L_task + λ_bone · L_bone + λ_jerk · L_jerk + λ_contact · L_conta
 
 ## 6. 선행 조건 및 리스크
 
-1. 3D 스켈레톤 추정 정확도가 낮으면 PMSR의 `L_bone`/`L_limit` 계산 자체가 노이즈에 오염된다 — 단안 카메라 기반 3D 복원의 정확도 한계를 먼저 측정해야 한다.
+1. 3D 스켈레톤 추정 정확도 리스크는 GVHMR+FootMR 채택으로 어느 정도 줄었다(MediaPipe 3D landmark보다 world-grounded 지표 우세). 다만 잔여 리스크가 남는다: Motion Puzzle의 학습 데이터(Xia/CMU/edin_locomotion)가 걷기·뛰기·점프 같은 로코모션 위주라, 촬영 계획(`samsam_shooting_guide.md`)에 있는 손짓·인사·조는 척 같은 동작에서는 스타일-콘텐츠 분리 자체가 학습 분포 밖이라 품질이 떨어질 수 있다 — SM-SGE 정제 헤드 설계·검증 시 이 도메인 격차를 전제로 둬야 한다.
 2. `BIO-IP_통합문서.md` 5장의 "재현 위협"과 동일한 문제: 이 파이프라인이 완성되면 곧 "서명을 훔쳐 다른 사람인 척 재현"하는 것도 기술적으로 가능해진다. 권리 인프라(동의·워터마킹) 설계가 파이프라인 구현보다 먼저 또는 동시에 필요하다.
 3. 이 문서의 acronym들을 대외 발표 자료에 쓸 경우 실제 인용 가능한 논문·라이브러리명(1장 표 우측)으로 대체할 것.
 4. "파이프라인이 돌아간다"와 "스타일 벡터가 개인 고유 자산이다"는 다른 주장이다 — 후자는 Layer 1 지표 없이는 방어할 수 없으므로, IP 계약 문서 작성 시점에는 Layer 1 데이터가 필요하다.
 
 ---
 
-## 7. 다음 단계 (지금 바로 착수)
+## 7. 다음 단계 (2026-08-01 갱신 — 1~3번 항목은 완료·대체돼 아래로 교체)
 
-1. `demo.py`의 2D 옵티컬 플로우를 MediaPipe Pose 3D world landmark로 교체 — 이미 쓰는 라이브러리 범위 안에서 업그레이드, 신규 의존성 불필요.
-2. ST-GCN(또는 2s-AGCN) 사전학습 가중치를 가져와 보유 영상(A/B/C 세트)에 대해 임베딩만 뽑아보는 파일럿 — 학습 없이 추론만으로 스타일 벡터 후보가 사람별로 갈리는지 우선 확인.
-3. Aberman et al. 오픈소스 리타겟팅 구현을 그대로 실행해 물리 손실(L_bone/L_limit/L_contact)이 이 프로젝트의 스켈레톤 포맷에 바로 적용되는지 검증.
-4. 위 세 파일럿이 붙으면 SM-SGE 임베딩 공간에서 within/between-subject 거리(기존 `analyze.py` 방식 재사용)를 계산해, Layer 1과 같은 방식으로 이 임베딩도 개인 식별력이 있는지 교차 검증.
+~~기존 1~3번(MediaPipe 3D landmark 교체, ST-GCN 사전학습 파일럿, Aberman 리타겟팅 검증)은 각각 GVHMR 채택, Motion Puzzle Encoder_sty 재사용 결정, Aberman 리타겟팅 폐기로 완료·대체됨.~~ 남은 실질 작업:
+
+1. Motion Puzzle `Encoder_sty` 특징을 시간축 풀링해 클립별 고정 벡터로 만드는 전처리 스크립트 작성(신규, 작은 공수).
+2. 그 위에 정제 헤드(MLP + Triplet Loss, Batch Hard, P명×K클립 배치) 프로토타입 학습 — 데이터는 `samsam_shooting_guide.md`의 8~12명×8동작 계획 그대로 사용.
+3. 학습된 임베딩에 `evaluate_icc.py::icc_3_1()` 연결해 반복 촬영 간 일관성 확인 — 도구는 이미 있음, 배선만 남음.
+4. ICC가 낮게 나오면: (a) 정제 헤드를 얕은 MLP에서 ST-GCN 처음부터 학습으로 확장하거나, (b) 대규모 공개 데이터(많은 사람×많은 동작)로 먼저 사전학습 후 우리 데이터로 파인튜닝 — 어느 쪽이 필요한지는 3번 결과를 보고 판단. (b) 후보(2026-08-01 조사): **NTU RGB+D 60**(40명×60동작) / **120**(106명×120동작, subject 수 많아 P×K에 적합) — 3D 관절 좌표라 Motion Puzzle 입력(BVH 회전)과 좌표계 다름, 변환 필요. 대안으로 **BABEL**(AMASS 기반, subject 라벨 있음, mocap이라 BVH/CMU 골격 호환성이 NTU보다 나을 가능성 — 검토 안 해본 옵션)도 후보. PKU-MMD·Human3.6M은 규모/인원 부족으로 우선순위 낮음.
