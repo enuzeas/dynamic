@@ -109,3 +109,37 @@ L_total = L_task + λ_bone · L_bone + λ_jerk · L_jerk + λ_contact · L_conta
 2. 그 위에 정제 헤드(MLP + Triplet Loss, Batch Hard, P명×K클립 배치) 프로토타입 학습 — 데이터는 `samsam_shooting_guide.md`의 8~12명×8동작 계획 그대로 사용.
 3. 학습된 임베딩에 `evaluate_icc.py::icc_3_1()` 연결해 반복 촬영 간 일관성 확인 — 도구는 이미 있음, 배선만 남음.
 4. ICC가 낮게 나오면: (a) 정제 헤드를 얕은 MLP에서 ST-GCN 처음부터 학습으로 확장하거나, (b) 대규모 공개 데이터(많은 사람×많은 동작)로 먼저 사전학습 후 우리 데이터로 파인튜닝 — 어느 쪽이 필요한지는 3번 결과를 보고 판단. (b) 후보(2026-08-01 조사): **NTU RGB+D 60**(40명×60동작) / **120**(106명×120동작, subject 수 많아 P×K에 적합) — 3D 관절 좌표라 Motion Puzzle 입력(BVH 회전)과 좌표계 다름, 변환 필요. 대안으로 **BABEL**(AMASS 기반, subject 라벨 있음, mocap이라 BVH/CMU 골격 호환성이 NTU보다 나을 가능성 — 검토 안 해본 옵션)도 후보. PKU-MMD·Human3.6M은 규모/인원 부족으로 우선순위 낮음.
+
+---
+
+## 8. 병행 트랙 — 표정 스타일 (2026-08-01 조사)
+
+> 위치: `External_doc/`의 촬영 프로토콜(`쌤쌤_표정_촬영가이드.pdf`, `쌤쌤_표정_촬영리스트.pdf`)과 정제 방법론(`쌤쌤_개인고유특징_정제_방법론.md`)은 이미 표정에도 그대로 적용 가능하도록 설계돼 있다 — 이 절은 그 위에 얹을 기술 스택(1~3장의 표정판)을 정리한다. 몸짓 트랙과 독립적인 병행 트랙이며, `professor_review.md` 원 기획(9개 항목)에는 없던 확장 범위 — `professor_review_status.md`의 번호 매김과는 별도로 관리한다.
+
+### 8.1 구성요소 표 (1장 형식 대응)
+
+| 구성요소 | 채택 후보 | 근거 |
+|---|---|---|
+| 표정판 SM-SGE (특징 추출) | **미확정** — 후보: **MediaPipe Face Mesh**(랜드마크 궤적, 프로젝트가 이미 MediaPipe 사용 중) 또는 **OpenFace / py-feat**(FACS Action Unit 강도 시계열 — `쌤쌤_표정_촬영리스트.pdf`의 "근육 패턴" 컬럼이 사실상 AU 서술이라 궁합 좋음) | Motion Puzzle `Encoder_sty`에 대응하는 표정판 인코더가 현재 없음 — 이 트랙의 유일한 미해결 조각 |
+| 표정판 SM-SGE (정제·검증) | 몸짓과 **동일한 분산성분분해 + ICC + LOMO** 방법론 그대로 재사용(`Person_i × Motion_m` 자리에 `Person_i × Expression_m`만 대입하면 수식 동일) | `External_doc/쌤쌤_개인고유특징_정제_방법론.md` — 모달리티 무관 설계. 대규모 실증 선행 근거: Chapariniya et al. 2025 "Investigating Identity Signals in Conversational Facial Dynamics via Disentangled Expression Features"(arXiv:2510.11223) — FLAME expression+jaw 계수(정적 얼굴 형태 제외)만으로 Conformer+supervised contrastive learning, CANDOR 1,429명 대화 데이터로 1,429-way 분류 61.14%(우연의 458배) — "표정 역학만으로 개인 식별 가능"이 이미 대규모로 실증됨 |
+| 표정판 SA-PMT (스타일 전송) | 1순위 후보 **FreeAvatar**(Qiu et al., SIGGRAPH Asia 2024, arXiv:2409.13180, [코드 공개](https://github.com/FuxiVirtualHuman/free_avatar)) — style code를 expression에서 분리해 여러 아바타를 단일 네트워크로 학습(Motion Puzzle이 캐릭터 안 가리고 한 디코더로 도는 것과 같은 설계). 대안 **VAST**(ICCV 2023, arXiv:2308.04830) — 임의 참조 영상에서 zero-shot 스타일 추출(라벨·페어링 불필요, Motion Puzzle과 같은 철학), 다만 코드 공개 미확인 | 2026-08-01 논문 조사 |
+
+### 8.2 데이터 수집 (설계 완료)
+
+`External_doc/쌤쌤_표정_촬영가이드.pdf`+`쌤쌤_표정_촬영리스트.pdf`가 몸짓 체크리스트(`쌤쌤_촬영_체크리스트.md`)와 동일한 원칙(시연 금지, 방식이 아니라 목표만 지시, 반복 촬영)으로 이미 설계됨:
+
+- 표정 10종(기본 6종: 기쁨·슬픔·분노·공포·혐오·놀람 + 확장 4종: 경멸·흥미·지루함·부끄러움) × 강도 3단계 × 3테이크 = 90클립/인
+- **강도 3단계가 종류보다 중요** — "감정을 어떻게 조절하는지"의 조절 곡선이 감정 종류보다 개인차가 큼(`쌤쌤_표정_촬영리스트.pdf`)
+- 정체성 신호는 정지 형태가 아니라 **시간 궤적**(온셋·유지·오프셋 속도)에 있음 — 몸짓 트랙의 "동작-종속 변이 vs 개인 고유 성분" 분리 논리와 동일한 전제
+
+### 8.3 알려진 한계
+
+1. `쌤쌤_표정_촬영리스트.pdf`의 감정어 100개 중 20개(그리움·질투·아련함 등, "○" 표시)는 **얼굴만으로 구분 불가** — 맥락 의존 감정이라 얼굴에서 추출을 시도하면 노이즈를 지문으로 학습하게 됨. 생성 단계의 라벨로만 사용, 촬영·정제 대상 아님.
+2. 촬영 순서가 고정(몸짓과 달리 참가자 간 로테이션 없음) — 감정 유도의 순서 효과 때문. 모든 참가자에게 동일한 순서 효과가 남는다는 걸 문서가 이미 알려진 한계로 명시.
+3. 표정판 특징 추출기(8.1 첫 행)가 아직 미확정 — 파일럿 착수 전 반드시 결정해야 하는 유일한 블로커.
+
+### 8.4 다음 단계
+
+1. MediaPipe Face Mesh vs OpenFace/py-feat 중 특징 추출기 선택(소규모 비교 파일럿 권장).
+2. `쌤쌤_개인고유특징_정제_방법론.md`의 분산성분분해를 표정 데이터에 적용 — Leave-One-Expression-Out 재식별(몸짓의 LOMO와 동일 절차)로 검증.
+3. 2번 통과 시 FreeAvatar 코드로 실제 전송 파일럿 착수.
