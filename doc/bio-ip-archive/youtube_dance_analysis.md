@@ -40,7 +40,7 @@ sura_A와 sura_B는 파일명에 둘 다 "sura"가 들어 있어 동일 크리�
 2. SOONIGROUP ↔ shorts_unknown — 189.4
 3. SOONIGROUP ↔ onepickent — 202.7
 
-![DTW 거리 행렬](../sample_dance_dtw.png)
+![DTW 거리 행렬](sample_dance_dtw.png)
 
 5. 해석
 같은 안무인데도 6명의 거리가 88~203으로 넓게 퍼져 있고, 특히 SOONIGROUP(거리 버스킹, "안무 창시자")이 스튜디오에서 찍은 나머지 5명과 항상 가장 멀다 — 촬영 환경(야외·이동 카메라·군중)과 퍼포먼스 맥락(창시자로서의 원곡 느낌) 차이가 동작 다이내믹스에 실제로 드러난다는 뜻일 수 있다. sura_A와 sura_B는 15쌍 중 2번째로 가까워, 동일 크리에이터일 가능성과 약하게 정합하지만 n=1쌍짜리 신호라 결론을 내릴 근거는 못 된다.

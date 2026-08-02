@@ -157,7 +157,7 @@
       <div class="stat"><div class="v good">0.026<span style="font-size:18px">~</span>0.16</div><div class="k">서로 다른 사람 간 거리 범위<br>(넓게 퍼짐 = 제각각)</div></div>
     </div>
     <figure>
-      <img src="doc/sample_dance_dtw.png" alt="킥드럼 챌린지 거리 행렬">
+      <img src="doc/bio-ip-archive/sample_dance_dtw.png" alt="킥드럼 챌린지 거리 행렬">
       <figcaption><b>킥드럼 챌린지 6명 비교표.</b> 각 칸은 두 사람 움직임의 거리입니다. 대각선(자기 자신)은 항상 0이라 밝고, 나머지 칸의 색이 제각각이면 사람마다 움직임이 다르다는 뜻입니다.</figcaption>
     </figure>
   </div>
@@ -171,7 +171,7 @@
       <div class="stat"><div class="v bad">0.05</div><div class="k">우리 반복촬영 일관성 점수<br>(기준 0.5 → 아직 낮음)</div></div>
     </div>
     <figure>
-      <img src="doc/demo_output.png" alt="팀원 3명의 손목 속도 서명">
+      <img src="doc/bio-ip-archive/demo_output.png" alt="팀원 3명의 손목 속도 서명">
       <figcaption><b>우리 팀이 직접 촬영한 실험.</b> 같은 동작을 이한성·송필순·박세준이 3번씩 반복. 위: 각자 반복 곡선 — <b>같은 사람인데도 반복마다 모양이 꽤 흔들립니다</b>(=일관성 숙제). 아래: 세 사람 평균이 서로 다르게 갈립니다(=개인차는 있음).</figcaption>
     </figure>
     <p class="dim">→ "움직임만으로 개인을 확실히 식별한다"까지 가려면 갈 길이 멉니다. 이 한계가 뒤(05번)에서 주제를 바꾼 핵심 이유입니다.</p>
@@ -182,7 +182,7 @@
     <h3>뜻밖의 발견 — AI가 만든 영상은 서로 뭉친다</h3>
     <p>Take Me Up 챌린지 영상을 모으다가 <strong>AI로 만든 것으로 의심되는 영상들</strong>이 섞여 있는 걸 발견했습니다. 분석해보니 <strong>AI 의심 영상끼리는 움직임이 아주 비슷하게 뭉치고, 진짜 사람들은 제각각 넓게 퍼졌습니다.</strong> 얼굴과 배경이 전부 달라도요.</p>
     <figure>
-      <img src="doc/sample_dance_takemeup_ai_vs_real_dtw.png" alt="AI 의심 vs 실사 거리 행렬">
+      <img src="doc/bio-ip-archive/sample_dance_takemeup_ai_vs_real_dtw.png" alt="AI 의심 vs 실사 거리 행렬">
       <figcaption><b>AI 의심(위·AI_) vs 진짜 사람(아래·R_) 비교표.</b> 노랑·주황 = 비슷함, 보라·남색 = 다름. <b>왼쪽 위 AI 무리는 전체적으로 따뜻한 색(서로 닮음)</b>, 오른쪽 아래 실사는 색 편차가 큽니다(제각각·남색 칸 존재). 우리 도구가 '겉모습'이 아니라 '움직임 그 자체'를 재고 있다는 증거이자, 사람의 움직임은 AI가 찍어낸 것과 결이 다르다는 신호입니다.</figcaption>
     </figure>
   </div>
@@ -193,7 +193,7 @@
   <h2>통제된 조건에서 다시 확인</h2>
   <p>실험은 유튜브만 쓴 게 아닙니다. 시작 신호·카메라 거리·조명을 통제한 <strong>직접 촬영</strong>도 병행했습니다 — 위 3명 서명 그래프가 그 결과물입니다.</p>
   <figure>
-    <img src="doc/Figure_1.png" alt="식별 정확도·오류율 결과">
+    <img src="doc/bio-ip-archive/Figure_1.png" alt="식별 정확도·오류율 결과">
     <figcaption><b>직접 촬영 6샘플 식별 실험.</b> 가장 가까운 걸 찾는 단순 식별은 성공(Rank-1 100%)했지만, 오류율(EER 13.9%)이 남고 같은/다른 사람 분포가 겹칩니다. <b>샘플 6개짜리 "가능성 확인" 수준</b>이지 성능 지표는 아닙니다.</figcaption>
   </figure>
 </section>

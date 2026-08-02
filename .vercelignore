@@ -25,7 +25,8 @@ __pycache__
 mvp.html
 style_transfer.html
 
-# doc/은 그림만 올린다 (페이지가 doc/*.png를 참조)
-doc/*.md
-doc/*.jpeg
-doc/*.mp4
+# doc/은 그림만 올린다 (페이지가 doc/bio-ip-archive/*.png를 참조)
+# 2026-08-02: doc/ 하위를 samsam/·bio-ip-archive/로 재정리하면서 한 단계 깊어짐 — ** 로 깊이 무관하게 매치
+doc/**/*.md
+doc/**/*.jpeg
+doc/**/*.mp4

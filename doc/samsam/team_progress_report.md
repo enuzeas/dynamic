@@ -96,7 +96,7 @@ Take Me Up 챌린지 영상을 모으다가, AI로 만든 것으로 의심되는
 - **동작 자체는 안 깨집니다.** 스타일을 바꿔도 "무슨 동작을 하고 있는지"는 안정적으로 유지됐습니다 — 원래 하려던 게 걷기면, 스타일이 바뀌어도 여전히 걷기로 보입니다.
 - **다만 스타일 조합에 따라 편차가 있습니다.** 4개 스타일 중 3개는 서로 뚜렷하게 갈라졌는데, 1개 조합은 거의 구분이 안 됐습니다. 원래 그 두 스타일 소스가 비슷했는지, 아니면 이 방법이 그 조합을 잘 못 가르는지는 다음에 더 봐야 합니다.
 
-실제 비교 그림: [motion_puzzle_style_spike.png](../motion_puzzle_style_spike.png), [motion_puzzle_style_spike_4styles.png](../motion_puzzle_style_spike_4styles.png)
+실제 비교 그림: [motion_puzzle_style_spike.png](../../motion_puzzle_style_spike.png), [motion_puzzle_style_spike_4styles.png](../../motion_puzzle_style_spike_4styles.png)
 
 ### 그래서 어떻게 되나
 
