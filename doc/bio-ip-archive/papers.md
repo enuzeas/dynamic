@@ -13,6 +13,14 @@
 | A5 | **Decoding identity from motion: how motor similarities colour our perception of self and others.** | *ResearchGate* | 움직임 패턴으로 자타 정체성을 인식하는 인지 메커니즘. |
 | A6 | **Doing It Your Way: How Individual Movement Styles Affect Action Prediction.** | *PubMed* PMID: 27780259 | 개인 운동 스타일이 타인의 행동 예측에 미치는 영향. |
 | A7 | **Discovering individual-specific gait signatures from data-driven models of neuromechanical dynamics.** | *PMC* PMC10610102 | 신경역학 모델에서 개인 고유 보행 서명 추출. |
+| A8 | Coste, A. et al. **Toward an Emotional Individual Motor Signature.** (2021) | [PMC8237757](https://pmc.ncbi.nlm.nih.gov/articles/PMC8237757/) | IMS(Individual Motor Signature) 조작적 정의: 속도(velocity)의 확률밀도함수(PDF)를 Earth Mover's Distance로 비교, MDS로 시각화. 감정 조건 내부 vs 조건 간 유사도로 검증. 단, 단일 과제(팔 좌우 왕복)만 검증 — 교차-과제(cross-task) 불변성은 저자도 "열린 질문"으로 남김. |
+| A9 | **Motor styles in action: Developing a computational framework for operationalization of motor distances.** | [PMC11634918](https://pmc.ncbi.nlm.nih.gov/articles/PMC11634918/) | "모터 스타일"을 Procrustes 거리(velocity·acceleration·**jerk** 3피처, 시간정규화)로 조작적 정의. 정밀 잡기 vs 손 전체 잡기, 두 과제 간 사람-사람 거리 순위가 유지됨을 Mantel test(r=0.78)로 확인 — 개인차 신호가 유사 과제 간엔 이전 가능함을 보인 사례. ICC=0.958로 표본 80% 제거해도 안정. |
+| A10 | **Gait signature changes with walking speed are similar among able-bodied young adults despite persistent individual-specific differences.** | [PMC11092667](https://pmc.ncbi.nlm.nih.gov/articles/PMC11092667/) | RNN 잠재상태+PCA로 뽑은 보행 서명이 걷기 속도 9단계에 걸쳐 선형 SVM 분류 99.8% 정확도로 개인을 구분. 단, 속도 변주 내에서만 검증 — 걷기 외 다른 동작 종류로 일반화는 다루지 않음. |
+| A11 | Herzfeld, D.J. et al. (2017). **Individual Movement Variability Magnitudes Are Explained by Cortical Neural Variability.** | *Journal of Neuroscience* 37(37):9076 — [PMID 28821678](https://pubmed.ncbi.nlm.nih.gov/28821678/) | 개인의 **시행 간 변동성 크기 자체**(궤적 모양이 아니라 "이 사람이 얼마나 일관/비일관한가")가 뻗기 **타겟이 달라져도, 오른팔/왼팔을 바꿔도** 유지되는 trait임을 확인. A9(유사 과제 변형 간 검증)보다 강한 교차-과제·교차-이펙터 증거 — 지금까지 찾은 것 중 도메인-독립성이 가장 뚜렷하게 확인된 신호. |
+
+**2026-08-06 검색 — "습관"(동작을 넘나드는 개인 불변 성분) 조작적 정의 조사.** SM-SGE 설계 재검토(교수 자문, `motion_ip_pipeline.md` 1-1장)에서 나온 질문 — 습관에 대한 기존 연구가 있는가에 대한 답. A8·A9·A10 모두 "개인 운동 서명" 계열이지만, **A9(Procrustes 기반 Motor Style)만 실제로 교차-과제 불변성을 통계적으로 검증**했다(단, 정밀 잡기 vs 손 전체 잡기처럼 유사한 과제 변형 간 검증이라 걷기 vs 손짓처럼 완전히 다른 동작 범주까지는 미검증). A8·A10은 단일 과제(또는 같은 과제의 속도 변주) 안에서만 검증했고 교차-과제 일반화는 저자들도 명시적으로 미검증/열린 질문이라 밝힘. **결론: "동작 종류를 완전히 넘나드는 개인 불변 성분(=습관)"은 학계에서도 아직 확실히 검증된 적 없는 지점 — 교수님의 재검토 요청이 문헌으로도 뒷받침됨.** 그나마 A9의 방법론(velocity·acceleration·jerk 피처 + Procrustes distance + Mantel test/ICC)이 Triplet Loss 헤드보다 가볍고 검증 가능한 조작적 정의 후보 — `motion_ip_pipeline.md` 7장 0번 재검토 시 참고.
+
+**원시 궤적(도메인 종속) vs 요약 통계량(도메인 독립 가능성) 구분.** Motion Puzzle 스타일 코드·A9의 Procrustes 거리는 둘 다 "이 동작에서의 속도/가속도/저크 **곡선 자체**"를 보므로 동작 종류에 원천적으로 얽혀 있다. 반면 **A4(vigor)**와 **A11(변동성 크기)**은 곡선이 아니라 그 위에서 뽑은 요약 통계량(스칼라 1개)이라 동작 종류·이펙터가 달라져도 유지된다는 증거가 더 강하다 — 특히 A11은 뻗기 타겟과 팔(effector)을 둘 다 바꿔서 검증해 A9보다 진짜 "다른 과제"에 가깝다. **단, 신뢰성 트레이드오프가 있다**: 요약 통계량 1~2개는 차원이 낮아 사람 수가 늘수록 분포가 겹칠 위험이 커지고(식별 변별력↓), 반복시행이 적으면 그 통계량 자체의 측정 신뢰도(ICC)도 낮아질 수 있다 — 즉 "가늘다"는 게 "쓸 수 없다"는 뜻은 아니지만, 도메인 독립성과 변별력이 트레이드오프 관계라 **이 신호들을 실제 배선하기 전 반드시 `evaluate_icc.py`로 반복 촬영 간 ICC를 먼저 재고, LOMO 재식별 정확도가 몇 명 규모까지 버티는지 확인**해야 한다. 종합하면 습관 추출은 콘텐츠-종속 스타일 문제보다 명백히 어려운 주제다 — 교수님의 자문·문헌이 보여주는 검증 범위(유사 과제 변형·팔 좌우 정도)가 이미 팀이 원하는 "동작 종류 전체를 넘나드는" 범위보다 좁고, 신호 자체도 가늘어지는 근본적 트레이드오프를 안고 있다.
 
 ---
 
@@ -176,6 +184,7 @@
 | ★★★ | F1 (ICC 가이드라인) | 항상성 검증 지표 설계 근거. |
 | ★★★ | D2 (Biometric Survey) | EER·rank-1 지표 정당화. |
 | ★★★ | H1 (FootMR, 2026) | footskate 리스크에 대한 저비용 즉시 적용 답. 교수 질문 1 직접 대응. |
+| ★★★ | A9 (Motor Style / Procrustes) | "습관" 조작적 정의 후보 — Triplet Loss 헤드보다 가볍고 검증 가능(Mantel test/ICC). SM-SGE 재검토 시 최우선 참고. |
 | ★★ | C2 (Motion Puzzle) | motion-to-motion 스타일 전이 1순위 후보 — 검증된 공개 코드. |
 | ★★ | C1/C7 (VQ-Style) | 스타일-콘텐츠 분리 최신 방법론(Disney Research). 코드 공개 확인 후 격상 검토. |
 | ★★ | A4 (Movement vigor) | 고유성 명제의 실험 증거. |
