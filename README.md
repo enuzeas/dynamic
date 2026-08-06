@@ -6,7 +6,7 @@
 
 ## 1. 컨셉
 
-**한 문장:** 사람의 움직이는 방식(그리고 표정 짓는 방식)을 고유의 데이터로 뽑아내 살아있는 캐릭터를 만든다.
+**한 문장:** 사람의 움직이는 방식을 고유의 데이터로 뽑아내 살아있는 캐릭터를 만든다.
 
 원래 가설("움직임으로 사람을 식별한다 → 생체 자산화")을 유튜브 안무 챌린지 5종·영상 50여 개로 실험한 결과 세 가지를 확인했다:
 
@@ -16,8 +16,8 @@
 
 여기에 "움직이는 방식"을 소유·거래할 법적 근거가 아직 없다는 벽까지 겹쳐, **"당신인지 알아맞히기"(식별) 대신 "당신의 움직임 느낌을 뽑아 캐릭터에 입히기"(스타일 전이)**로 방향을 바꿨다. 통계적 증명이 아니라 눈에 보이는 결과물이 기준이 되고, 창작자(게임·애니·버추얼 캐릭터·광고)라는 명확한 수요가 있으며, 필요한 기술은 새로 연구하지 않고 **검증된 오픈소스를 조립**하면 된다.
 
-- 약속하는 것: 리듬·보폭·무게중심 같은 큰 움직임 느낌의 전이, 그리고 표정을 짓고 푸는 속도 같은 개인 특유의 표정 조절 곡선.
-- 약속하지 않는 것(지금은): 손가락 세부 동작까지의 완벽 재현 — 멀티캠이 필요한 영역이라 범위 밖.
+- 약속하는 것: 리듬·보폭·무게중심 같은 큰 움직임 느낌의 전이.
+- 약속하지 않는 것(지금은): 손가락 세부 동작까지의 완벽 재현(멀티캠 필요), 표정(2026-08-05 자문 결과 몸짓에 집중하기로 하며 보류 — 6장 참고).
 
 전환 근거 원문: [doc/samsam/team_progress_report.md](doc/samsam/team_progress_report.md)(5분 요약), [doc/samsam/samsam_worksheet.md](doc/samsam/samsam_worksheet.md)(확정 워크시트), [doc/bio-ip-archive/motion_value_assessment.md](doc/bio-ip-archive/motion_value_assessment.md)(판단 근거).
 
@@ -31,12 +31,12 @@
 |---|---|---|
 | 영상 → 3D 모션 | **GVHMR + FootMR** (Colab T4) | MediaPipe 3D landmark보다 world-grounded 지표 우세, WHAM보다 추론 7배 빠름 |
 | 스타일 추출·전송 (몸짓) | **Motion Puzzle** (Jang et al. 2022) | 신체 부위별(5부위) AdaIN+attention, 라벨·페어링 없이 임의 스타일 전송 가능. 로컬(Mac)에서 실행 확인 완료 |
-| 개인 고유 특징 정제 | Motion Puzzle `Encoder_sty` 위에 **Triplet Loss(Batch Hard, P명×K클립)** 정제 헤드 신규 학습 | 구현 후보 `pytorch-metric-learning`으로 확정. Motion Puzzle 자체엔 없는 기능이라 이 프로젝트의 실질적 신규 기여 지점 |
+| 개인 고유 특징 정제 | Motion Puzzle `Encoder_sty` 위에 **Triplet Loss(Batch Hard, P명×K클립)** 정제 헤드 신규 학습 | 구현 후보 `pytorch-metric-learning`으로 확정. ⚠ 다만 2026-08-05 원저자 자문 결과 이 설계의 전제(여러 동작 걸친 개인 불변 성분 = 사실상 "스타일"이 아니라 "습관")가 재검토 대상이 됨 |
 | 리타겟팅 | SMPL→CMU-BVH(Motion Puzzle 입력용) + CMU→Mixamo(뷰어용), 2단 리타겟 | 전 관절 방향 검증 완료 |
-| 정량 평가 | DTW(재현 신뢰도) + ICC(반복 촬영 간 일관성) | 이미 구현된 도구(`src/analyze.py`, `evaluate_icc.py`) 재사용 |
-| 표정 스타일 (병행 트랙) | 데이터 수집 프로토콜 완료(`External_doc/`), 정제 방법론은 몸짓과 동일 수식 재사용 | 특징 추출기(MediaPipe Face Mesh vs OpenFace/py-feat)만 미확정 |
+| 정량 평가 | DTW(재현 신뢰도) + ICC(반복 촬영 간 일관성) + LOMO(동작 하나 빼고 재식별) | 이미 구현된 도구(`src/analyze.py`, `evaluate_icc.py`) 재사용. ICC+LOMO 조합은 2026-08-05 원저자에게 "개인 고유성 검증엔 적절한 방법"이라고 확인받음 |
+| 표정 스타일 (병행 트랙) | **보류(2026-08-05)** | 얼굴은 몸짓과 다른 영역이고 자문 교수 랩 소관도 아니라, 하나에 집중하라는 권고를 받아 몸짓에 집중하기로 정리. 조사 내용은 `motion_ip_pipeline.md` 8장에 참고용으로 보존 |
 
-상세 아키텍처·손실 함수·PMSR 정의는 [doc/samsam/motion_ip_pipeline.md](doc/samsam/motion_ip_pipeline.md) 참고. `professor_review.md`(원 기획서) 항목별 실제 구현 현황 대조는 [doc/samsam/professor_review_status.md](doc/samsam/professor_review_status.md)에 정리돼 있다.
+상세 아키텍처·손실 함수·PMSR 정의는 [doc/samsam/motion_ip_pipeline.md](doc/samsam/motion_ip_pipeline.md) 참고(1-1장에 자문 결과 정리). `professor_review.md`(원 기획서) 항목별 실제 구현 현황 대조는 [doc/samsam/professor_review_status.md](doc/samsam/professor_review_status.md)에 정리돼 있다.
 
 ---
 
@@ -49,27 +49,28 @@
 - 2단 리타겟팅 (SMPL→CMU-BVH, CMU→Mixamo)
 - 웹 뷰어 — 원본/스타일A/스타일B 3패널 비교 데모 (`samsam_viewer.html`, `style_transfer.html`)
 - DTW·ICC 정량 평가 도구 (도구는 완성, 아래 항목에 배선만 남음)
-- 표정 트랙 데이터 수집 프로토콜 설계 (촬영가이드·체크리스트·정제 방법론)
+- **Motion Puzzle 원저자(이성희 교수, KAIST CT) 자문 완료(2026-08-05)** — 담당 대학원생 배정, 정기 협업 구조 확정. 회의록: `External_doc/20260805_이성희교수_회의록.md`
 
 ### 앞으로 진행해야 할 부분
 
-1. **개인 고유 특징 정제 헤드 구현** — 설계는 끝났고(`pytorch-metric-learning` 채택 확정) 코드로 옮기는 작업만 남음. 이게 이 프로젝트의 핵심 병목이자 가장 중요한 남은 작업.
-2. **ICC·DTW를 정제된 임베딩에 배선** — 반복 촬영 간 일관성(ICC), 원본-재현 유사도(DTW) 검증을 위 1번 결과에 연결.
-3. **표정 스타일 트랙 구현 착수** — 특징 추출기(MediaPipe Face Mesh vs OpenFace/py-feat) 선택 → 정제(몸짓과 동일 방법론) → 전송(FreeAvatar 코드 공개, 1순위 후보).
+1. **개인 고유 특징 정제 접근 재검토(최우선)** — 자문 결과 현재 설계(Encoder_sty + Triplet Loss)의 전제가 "스타일"이 아니라 "습관" 문제일 수 있다는 지적을 받음. 스코프를 좁힐지, 그대로 밀지, 개인 식별 분류기 쪽으로 무게중심을 옮길지 대학원생과 함께 결정 필요.
+2. **1번 결정 후 정제 헤드 구현** — 구현 후보(`pytorch-metric-learning`) 조사는 끝남, 접근 방식만 확정되면 바로 착수 가능.
+3. **ICC·DTW·LOMO를 정제된 임베딩에 배선** — 반복 촬영 간 일관성(ICC), 원본-재현 유사도(DTW), 동작 하나 뺀 재식별(LOMO) 검증을 위 결과에 연결.
 4. **영상 기반 개인화 아바타 생성(외형)** — 아직 미착수. 지금 뷰어는 고정 Mixamo 캐릭터만 사용.
-5. **개인 IP 임베딩 스토어** — 식별자 기반 저장·버전 관리. 위 1번이 안정화된 뒤 순서상 자연스러움.
+5. **개인 IP 임베딩 스토어** — 식별자 기반 저장·버전 관리. 1번이 안정화된 뒤 순서상 자연스러움.
 
-항목별 상세 근거는 [doc/samsam/professor_review_status.md](doc/samsam/professor_review_status.md) 참고.
+표정 스타일 트랙은 2026-08-05 자문 결과 보류(위 2장 표 참고) — 이 목록에서 제외했다. 항목별 상세 근거는 [doc/samsam/professor_review_status.md](doc/samsam/professor_review_status.md) 참고.
 
 ---
 
 ## 4. 지원이 필요한 부분
 
 - **안정적인 GPU 자원.** 영상→3D 모션(GVHMR+FootMR) 단계는 GPU가 구조적으로 필수인데, 현재 무료 Colab T4 세션에 의존 중이라 세션 중 GPU 미배정·끊김 변동성이 실전 리스크다. 정제 헤드를 대규모 공개 데이터(NTU RGB+D 등)로 사전학습하기로 결정되면 그 학습에도 GPU가 필요하다 (`doc/samsam/samsam_gpu_requirements.md`).
-- **데이터 수집 인력·일정.** 몸짓 15~20명(6동작×3테이크, 1인당 약 15분) + 표정 촬영은 별도로 촬영자 2명(지시문 담당+자극 담당)이 필요하고 참가자당 25분 소요. 재촬영(S2, 지문 검증의 핵심) 대상자 확보도 필요.
-- **장비.** 표정용 얼굴 클로즈업 카메라 1대 추가(기존 전신 카메라 2대와 별개), 혐오/공포 자극 소품(식초·소리 자극 도구).
-- **Motion Puzzle 원저자(KAIST) 자문 가능성 검토.** 채택한 핵심 모델이 KAIST 이성희 교수 연구실 자체 연구 성과라 실제 협업 여부를 논의해볼 수 있는 위치 (`doc/bio-ip-archive/... professor_review 원문` 참고).
-- **권리·동의 인프라 설계.** 파이프라인이 완성되면 "서명을 훔쳐 다른 사람인 척 재현"도 기술적으로 가능해지므로, 동의·워터마킹 같은 권리 인프라를 파이프라인 구현과 병행 또는 선행해서 설계할 필요가 있다.
+- **데이터 수집 인력·일정.** 15~20명 × 6~8동작(캘리브레이션 포함) × 3테이크, 1인당 약 15~18분. 재촬영(S2, 지문 검증의 핵심) 대상자 5명 확보도 필요.
+- **개인 고유 특징 정제 접근 확정.** 원저자 자문 결과 현재 설계 전제가 재검토 대상이 됨 — 대학원생과의 첫 정기 미팅에서 스코프(동작 내 개인차 vs 습관 추출 vs 식별 분류기)를 확정하는 게 다음 병목.
+- **권리·동의 인프라 설계.** 파이프라인이 완성되면 "서명을 훔쳐 다른 사람인 척 재현"도 기술적으로 가능해지므로, 동의·워터마킹 같은 권리 인프라를 파이프라인 구현과 병행 또는 선행해서 설계할 필요가 있다. (2026-08-05 자문에서도 개인 습관적 동작 자체의 법적 보호는 불분명하다는 의견을 받음 — `External_doc/20260805_이성희교수_회의록.md`)
+
+> Motion Puzzle 원저자(KAIST 이성희 교수) 자문·협업은 2026-08-05 확보 완료 — 담당 대학원생이 배정돼 정기 미팅으로 이어간다.
 
 ---
 
@@ -90,7 +91,7 @@ sample/                 샘플 촬영 영상 (original/ 원본, compressed/ 압�
 reports/                영상별 분석 리포트 + 뷰어(viewer.html)
 doc/samsam/             쌤쌤(현재 트랙) — 파이프라인 아키텍처, 세션별 실행 계획, 촬영 가이드, GPU 산정, 발표 자료
 doc/bio-ip-archive/     BIO-IP(이전 가설) — 식별 명제 검증 실험, 안무 챌린지 분석, 배경 문서
-External_doc/           표정 스타일 병행 트랙 — 촬영 프로토콜·정제 방법론 (팀원 별도 작성)
+External_doc/           팀원 별도 작성 자료 — 몸짓 촬영 체크리스트 v2, 표정 스타일 트랙 조사(보류), 이성희 교수 자문 준비·회의록
 evaluate_icc.py, hmr4d_to_npz.py, retarget_smpl_to_cmu.py,
 skeleton_extract.py, style_transfer_server.py            파이프라인 스크립트 (repo 루트에서 실행 전제, external/motion_puzzle 상대경로 참조)
 index.html, report.html, samsam_viewer.html, style_transfer.html   Vercel 배포 페이지 + 인터랙티브 데모
@@ -151,7 +152,8 @@ python style_transfer_server.py   # http://localhost:8940
 - [doc/samsam/team_progress_report.md](doc/samsam/team_progress_report.md) — 지금까지 온 길과 쌤쌤 전환 이유 (5분 요약)
 - [doc/samsam/samsam_plan.md](doc/samsam/samsam_plan.md) — 세션별(1~7) 실행 로그
 - [doc/samsam/samsam_gpu_requirements.md](doc/samsam/samsam_gpu_requirements.md) / [samsam_gpu_time_estimate.md](doc/samsam/samsam_gpu_time_estimate.md) — GPU 필요 여부·소요 시간 추정
-- [External_doc/](External_doc/) — 표정 스타일 병행 트랙 촬영 프로토콜·정제 방법론
+- [External_doc/20260805_이성희교수_회의록.md](External_doc/20260805_이성희교수_회의록.md) — Motion Puzzle 원저자 자문 결과 원문(스타일-습관 구분, 검증 방법 확인, 표정 트랙 보류 결정 등)
+- [External_doc/](External_doc/) — 몸짓 촬영 체크리스트 v2, 표정 스타일 트랙 조사(보류), 자문 준비 자료
 
 **이전 가설(BIO-IP)**
 - [doc/bio-ip-archive/motion_value_assessment.md](doc/bio-ip-archive/motion_value_assessment.md) — 스타일 전이 기술 선택 판단 근거 (Motion Puzzle, FootMR 등)

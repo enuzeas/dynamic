@@ -10,7 +10,7 @@
 
 | 구성요소 | 채택할 검증된 기술 | 소스 |
 |---|---|---|
-| SM-SGE (스켈레톤 인코더 + 정제) | Motion Puzzle `Encoder_sty`(고정, 재학습 없음) 특징을 뽑아, 그 위에 Triplet Loss(Batch Hard, P명×K클립 배치) 정제 헤드를 얹음 | Jang et al. 2022 "Motion Puzzle"(이미 채택·실행 확인, `external/motion_puzzle`) + gait 논문(Zheng et al., arXiv:2111.11720)의 학습 방식 차용 — 처음 계획한 ST-GCN 처음부터 학습은 보류, 기존 특징 위 얕은 헤드로 우선 시도. **구현 후보(2026-08-01 조사)**: Zheng et al. 논문 자체는 코드 미공개(CASIA-B, ST-GCN, GitHub 확인 안 됨) → 직접 구현 대상 아님. Batch Hard+P×K 원조인 Hermans et al. 2017("In Defense of the Triplet Loss")의 참고 구현([CoinCheung](https://github.com/CoinCheung/triplet-reid-pytorch)/[kilianyp](https://github.com/kilianyp/triplet-reid-pytorch) triplet-reid-pytorch)은 손실 수식 확인용으로만 참고, 포크 대상 아님(오래됨·미관리). 실제 채택 후보는 **`pytorch-metric-learning`**(pip 설치, `miners.BatchHardMiner`+`losses.TripletMarginLoss`로 P×K 마이닝+로스 몇 줄에 해결, 유지보수됨) — `motion_puzzle`/`mcmldm` conda env 둘 다 미설치 확인, `pip install pytorch-metric-learning` 필요 |
+| SM-SGE (스켈레톤 인코더 + 정제) | Motion Puzzle `Encoder_sty`(고정, 재학습 없음) 특징을 뽑아, 그 위에 Triplet Loss(Batch Hard, P명×K클립 배치) 정제 헤드를 얹음 — **⚠ 2026-08-05 교수 자문 결과 이 설계의 전제(동작 종류를 넘나드는 개인 불변 성분 = "습관"을 Encoder_sty 정제만으로 추출)가 재검토 대상이 됨, 1-1장 참고** | Jang et al. 2022 "Motion Puzzle"(이미 채택·실행 확인, `external/motion_puzzle`) + gait 논문(Zheng et al., arXiv:2111.11720)의 학습 방식 차용 — 처음 계획한 ST-GCN 처음부터 학습은 보류, 기존 특징 위 얕은 헤드로 우선 시도. **구현 후보(2026-08-01 조사)**: Zheng et al. 논문 자체는 코드 미공개(CASIA-B, ST-GCN, GitHub 확인 안 됨) → 직접 구현 대상 아님. Batch Hard+P×K 원조인 Hermans et al. 2017("In Defense of the Triplet Loss")의 참고 구현([CoinCheung](https://github.com/CoinCheung/triplet-reid-pytorch)/[kilianyp](https://github.com/kilianyp/triplet-reid-pytorch) triplet-reid-pytorch)은 손실 수식 확인용으로만 참고, 포크 대상 아님(오래됨·미관리). 실제 채택 후보는 **`pytorch-metric-learning`**(pip 설치, `miners.BatchHardMiner`+`losses.TripletMarginLoss`로 P×K 마이닝+로스 몇 줄에 해결, 유지보수됨) — `motion_puzzle`/`mcmldm` conda env 둘 다 미설치 확인, `pip install pytorch-metric-learning` 필요 |
 | SA-PMT (스타일 전송) | **Motion Puzzle**(신체 부위별 AdaIN + attention) | Jang et al. 2022, ACM TOG — 실측 ~9초/쌍(`samsam_dev_spec.md` 89행). ~~Aberman et al. skeleton-aware retargeting~~은 리타겟팅 용도로만 검토했다가 이름 고정 24개 Mixamo 캐릭터 한정이라 폐기(`samsam_dev_spec.md`) — 스타일 전송 자체엔 애초에 쓴 적 없음 |
 | PMSR (물리 정규화 손실) | Motion Puzzle이 이미 대부분 내장: 그래프 컨볼루션이 스켈레톤 토폴로지를 바꾸지 않아 `L_bone` 문제가 원천적으로 없고, `loss_sm_rec`/`loss_sm_cyc`(프레임 차분 L1)가 `L_jerk` 역할, `remove_fs.remove_foot_sliding()`이 `L_contact` 역할 — **별도 손실 함수를 새로 설계할 필요가 사라짐.** `L_limit`(관절 가동범위)만 미검증 잔여 리스크 | `external/motion_puzzle/trainer.py`(`compute_gen_loss`), `remove_fs.py` 코드 확인 |
 | Sigma-Lognormal Model | kinematic theory of rapid human movements | Plamondon — 기존 오픈 구현체(SLM 툴박스) 재사용 |
@@ -18,6 +18,20 @@
 | ICC | 급내상관계수 | `evaluate_icc.py::icc_3_1()`에 이미 구현됨(2026-07-25) — 현재 8관절 속도곡선(식별 트랙)에만 적용 중, SM-SGE 임베딩엔 배선만 하면 됨 |
 
 심사·특허 문서에는 위 우측 컬럼(실제 논문·라이브러리명)으로 인용한다. 좌측은 이 프로젝트 내부에서 부르는 이름.
+
+---
+
+## 1-1. 교수 자문 결과 (2026-08-05) — 설계 전제 재검토 필요
+
+> Motion Puzzle 원저자 이성희 교수(KAIST CT)와의 미팅 결과. 회의록 원문: `External_doc/20260805_이성희교수_회의록.md`. 이 절의 발견은 아래 1·3·4·7·8장에 각각 반영돼 있다 — 여기는 한곳에 모아 정리.
+
+1. **A-1(도메인 격차) 우려가 사실로 확인됨** — "모션 스타일은 콘텐츠(맥락)와 밀접하게 연결돼 있어서, 걷기에서 뽑은 스타일을 대화 동작에 적용해도 그 사람의 특징이 그대로 드러나지 않는다. 특정 동작의 스타일을 뽑으려면 그 동작 자체를 캡처해야 한다." → Motion Puzzle 학습 데이터가 로코모션 위주라는 문제를 넘어, **구조적으로 스타일이 동작에 종속**된다는 뜻.
+2. **A-2("가장 중요한 질문")도 사실상 답이 나옴 — SM-SGE 설계의 핵심 전제가 흔들림.** 교수님은 "습관"(장시간에 걸쳐 반복되는 고레벨 행동)과 "모션 스타일"(걸음걸이 같은 개별 동작의 저레벨 질감)을 다른 개념으로 구분했다. Motion Puzzle 같은 저레벨 생성 모델로는 습관 자체를 잡아내기 어렵고, 습관은 별도의 **행동(behavior) 레벨 분석**이 필요하다고 답했다. → SM-SGE가 원래 노리던 것("Encoder_sty 위에 Triplet Loss로 여러 동작에 걸친 개인 불변 성분을 뽑는다")은 사실상 "스타일"이 아니라 "습관"을 뽑겠다는 것이라, **이 접근이 원리적으로 맞는 문제 설정인지 재검토가 필요**하다.
+3. **Smoothing/지터 질문(A-4)에 원칙적 답은 없음** — 정해진 규칙 없이, 보통 One Euro Filter를 경험적으로 조정하며 "괜찮다" 싶은 수준까지 반복 테스트한다고 확인. Jerk(신호)와 지터(노이즈)를 가르는 수학적 기준은 존재하지 않고, 실무는 경험적 튜닝뿐이라는 뜻(4장에 반영).
+4. **검증 방법은 확인받음** — 임베딩 기반 동일인/타인 구별 + LOMO(동작 하나 빼고 검증) 방식이 "개인의 고유성(unique함)을 보려는 목적에는 적절한 방법"이라고 확인.
+5. **산출물이 3갈래로 나뉜다는 프레임 제시**: ① 개인 식별 분류기 ② 일반 모션에 개인 스타일을 입히는 스타일라이즈/생성기 ③ 습관을 재현하는 생성기. 팀의 실제 관심사는 ②지만, 교수님은 남은 기간(8~11월, 약 3개월) 안에는 **①이 짧은 데이터로도 명확한 결과가 나와 더 수월**하고, **②는 평가가 주관적이라 어려울 수 있다**고 조언. 팀은 ②(스타일 입히기) 방향 유지를 밝혔고, 교수님은 활발히 연구되는 분야라 최신 툴 추천이 가능하다고 답함.
+6. **협업 구조 확정** — 단순 자문을 넘어 담당 대학원생을 배정해 Motion Puzzle 관련 개발을 함께 진행(정기 온/오프라인 미팅). 도구 추천 등 실무 지원도 가능.
+7. **표정 트랙 중단** — 얼굴은 몸짓과 다른 영역이고 이성희 교수 랩 소관도 아니라서(노준영 교수 랩 영역), 하나에 집중하라는 권고를 받아 팀은 **몸짓에 집중**하기로 정리. 8장(병행 트랙)은 이 결정에 따라 보류.
 
 ---
 
@@ -56,7 +70,7 @@
        remove_fs.remove_foot_sliding() + loss_sm_* (PMSR 역할, 아래 4장)
 ```
 
-- **인코더(SM-SGE)**: Motion Puzzle의 `Encoder_sty`를 그대로 특징 추출기로 재사용(콘텐츠 인코더는 InstanceNorm으로 통계를 지우고 스타일 인코더는 안 지우는 구조로 이미 "동작 종류 대 통계적 스타일"을 어느 정도 분리함). 다만 이건 **클립 1개짜리** 통계일 뿐 "여러 다른 동작에 걸친 개인 불변 성분"은 아니라서, 그 위에 Triplet Loss 기반 정제 헤드를 새로 얹는 게 이 프로젝트의 실질적 신규 기여 지점(`professor_review_status.md` 4번 항목).
+- **인코더(SM-SGE)**: Motion Puzzle의 `Encoder_sty`를 그대로 특징 추출기로 재사용(콘텐츠 인코더는 InstanceNorm으로 통계를 지우고 스타일 인코더는 안 지우는 구조로 이미 "동작 종류 대 통계적 스타일"을 어느 정도 분리함). 다만 이건 **클립 1개짜리** 통계일 뿐 "여러 다른 동작에 걸친 개인 불변 성분"은 아니라서, 그 위에 Triplet Loss 기반 정제 헤드를 새로 얹는 게 이 프로젝트의 실질적 신규 기여 지점(`professor_review_status.md` 4번 항목) — **다만 2026-08-05 교수 자문 결과 "동작을 넘나드는 불변 성분"은 사실상 스타일이 아니라 습관 개념이고, Motion Puzzle 같은 저레벨 생성 모델 위에 얹는 정제 헤드만으로는 안 될 수 있다는 지적을 받음(1-1장). 착수 전 이 접근의 유효성을 먼저 재검토할 것.**
 - **전송기(SA-PMT)**: Motion Puzzle `Decoder` — 신체 부위별 AdaIN(통계 이식) + attention(국소 패턴 이식)을 4단계 해상도에서 반복 적용. 원래 검토했던 Aberman skeleton-aware retargeting은 이 역할로 쓴 적 없음(리타겟팅 서브 문제에만 검토 후 폐기).
 - **정규화(PMSR)**: Motion Puzzle 자체 손실(재구성+순환일관성+평활)과 `remove_fs`가 대부분 커버 — 아래 4장 참고.
 
@@ -75,7 +89,7 @@ L_total = L_task + λ_bone · L_bone + λ_jerk · L_jerk + λ_contact · L_conta
 | 항 | 정의 | 목적 |
 |---|---|---|
 | `L_bone` | 본 길이(관절 간 거리)의 프레임 간 분산 | 골격 안정성 — 팔다리가 늘었다 줄었다 하는 왜곡 방지 |
-| `L_jerk` | 관절 가속도의 시간 미분(저크) 크기에 대한 패널티 | 최소 저크 이론(`BIO-IP_통합문서.md` 4장) 근거 — 부자연스러운 급변 억제, 동시에 다이내믹스 서명 자체가 저크 기반이므로 과도한 평활화로 서명을 지우지 않게 λ 조절 필요 |
+| `L_jerk` | 관절 가속도의 시간 미분(저크) 크기에 대한 패널티 | 최소 저크 이론(`BIO-IP_통합문서.md` 4장) 근거 — 부자연스러운 급변 억제, 동시에 다이내믹스 서명 자체가 저크 기반이므로 과도한 평활화로 서명을 지우지 않게 λ 조절 필요. **2026-08-05 교수 자문**: 개인 고유 저크(신호)와 포즈 추정 지터(노이즈)를 가르는 원칙적 기준은 없다고 확인 — 실무는 One Euro Filter를 경험적으로 조정하며 "괜찮다" 싶은 수준까지 반복 테스트하는 방식뿐. λ_jerk도 같은 방식(경험적 튜닝)으로 접근할 것, 수학적 최적값을 찾으려 하지 말 것 |
 | `L_contact` | 지면 접촉이 필요한 관절(발 등)의 위치 일관성 | 미끄러짐(footskate) 방지 |
 | `L_limit` | 관절 각도가 인체 가동 범위를 벗어나는 정도 | 신체 연결성·해부학적 타당성 |
 | `L_task` | 목표 동작(콘텐츠)과의 유사도 (예: 관절 위치 재구성 오차) | 원래 동작 의미 보존 |
@@ -101,10 +115,14 @@ L_total = L_task + λ_bone · L_bone + λ_jerk · L_jerk + λ_contact · L_conta
 
 ---
 
-## 7. 다음 단계 (2026-08-01 갱신 — 1~3번 항목은 완료·대체돼 아래로 교체)
+## 7. 다음 단계 (2026-08-05 교수 자문 반영 — 0번 항목 신규 추가)
 
 ~~기존 1~3번(MediaPipe 3D landmark 교체, ST-GCN 사전학습 파일럿, Aberman 리타겟팅 검증)은 각각 GVHMR 채택, Motion Puzzle Encoder_sty 재사용 결정, Aberman 리타겟팅 폐기로 완료·대체됨.~~ 남은 실질 작업:
 
+0. **(신규, 최우선) SM-SGE 접근 방식 재검토** — 1-1장 교수 자문 결과, "동작을 넘나드는 개인 불변 성분" 추출이 스타일(저레벨)이 아니라 습관(고레벨) 문제일 수 있다는 지적을 받음. 아래 1~4번 착수 전에 팀 결정 필요:
+   - (a) 스코프를 좁혀 "각 동작 안에서의 개인차"(같은 동작을 여러 번 반복 촬영해 그 동작 하나에서의 스타일 일관성)로 재정의하거나
+   - (b) 원래 계획대로 여러 동작에 걸친 정제를 시도하되 "습관 추출"이라는 다른 문제임을 인지하고 진행하거나
+   - (c) 남은 3개월(8~11월) 제약을 고려해 교수님이 언급한 "① 개인 식별 분류기"(짧은 데이터로도 명확한 결과) 쪽으로 무게 중심을 옮기는 것도 검토 — 대학원생 배정 후 첫 정기 미팅에서 논의
 1. Motion Puzzle `Encoder_sty` 특징을 시간축 풀링해 클립별 고정 벡터로 만드는 전처리 스크립트 작성(신규, 작은 공수).
 2. 그 위에 정제 헤드(MLP + Triplet Loss, Batch Hard, P명×K클립 배치) 프로토타입 학습 — 데이터는 `samsam_shooting_guide.md`의 8~12명×8동작 계획 그대로 사용.
 3. 학습된 임베딩에 `evaluate_icc.py::icc_3_1()` 연결해 반복 촬영 간 일관성 확인 — 도구는 이미 있음, 배선만 남음.
@@ -112,8 +130,10 @@ L_total = L_task + λ_bone · L_bone + λ_jerk · L_jerk + λ_contact · L_conta
 
 ---
 
-## 8. 병행 트랙 — 표정 스타일 (2026-08-01 조사)
+## 8. 병행 트랙 — 표정 스타일 (2026-08-01 조사, **2026-08-05 보류**)
 
+> **⚠ 보류(2026-08-05)**: 이성희 교수 미팅에서 얼굴은 몸짓과 다른 영역이고 본인 랩 소관도 아니라며(노준영 교수 랩 영역) 하나에 집중하라는 권고를 받아, 팀은 몸짓에 집중하기로 정리했다(1-1장 7번). 아래 조사 내용은 삭제하지 않고 **참고용으로 보존** — 나중에 표정 트랙을 재개할 상황(예: 노준영 교수 랩과 별도 협업)이 생기면 이 조사부터 다시 시작하면 된다.
+>
 > 위치: `External_doc/`의 촬영 프로토콜(`쌤쌤_표정_촬영가이드.pdf`, `쌤쌤_표정_촬영리스트.pdf`)과 정제 방법론(`쌤쌤_개인고유특징_정제_방법론.md`)은 이미 표정에도 그대로 적용 가능하도록 설계돼 있다 — 이 절은 그 위에 얹을 기술 스택(1~3장의 표정판)을 정리한다. 몸짓 트랙과 독립적인 병행 트랙이며, `professor_review.md` 원 기획(9개 항목)에는 없던 확장 범위 — `professor_review_status.md`의 번호 매김과는 별도로 관리한다.
 
 ### 8.1 구성요소 표 (1장 형식 대응)
