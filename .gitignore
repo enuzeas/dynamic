@@ -20,3 +20,5 @@ SMPL/
 .agents/
 .env
 google-cloud-cli-darwin-arm.tar.gz
+data/raw/
+data/consent/id_mapping.csv
