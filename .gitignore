@@ -18,4 +18,5 @@ external/
 google-cloud-sdk/
 SMPL/
 .agents/
+.env
 google-cloud-cli-darwin-arm.tar.gz

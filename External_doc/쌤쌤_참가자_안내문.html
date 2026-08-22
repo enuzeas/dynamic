@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>쌤쌤 촬영 참가자 안내문</title>
+<style>
+  @page {
+    size: A4 portrait;
+    margin: 8mm 10mm 8mm 10mm;
+  }
+
+  * {
+    box-sizing: border-box;
+    -webkit-print-color-adjust: exact;
+  }
+
+  body {
+    font-family: "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+    color: #1a202c;
+    margin: 0;
+    padding: 0;
+    background-color: #ffffff;
+    font-size: 7.8pt;
+    line-height: 1.35;
+  }
+
+  /* Header Banner */
+  .hero-banner {
+    background: linear-gradient(135deg, #1a365d 0%, #2b6cb0 100%);
+    color: white;
+    padding: 8px 14px;
+    border-radius: 6px;
+    margin-bottom: 7px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .hero-text h1 {
+    font-size: 14pt;
+    font-weight: 800;
+    margin: 0 0 2px 0;
+    letter-spacing: -0.5px;
+  }
+
+  .hero-text p {
+    font-size: 7.8pt;
+    margin: 0;
+    opacity: 0.9;
+  }
+
+  .hero-badge {
+    background-color: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    padding: 4px 10px;
+    border-radius: 20px;
+    text-align: center;
+    font-size: 7.5pt;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  /* Section Styles */
+  .section-title {
+    font-size: 8.8pt;
+    font-weight: 800;
+    color: #1a365d;
+    margin: 5px 0 3px 0;
+    display: flex;
+    align-items: center;
+  }
+
+  .section-title span {
+    display: inline-block;
+    width: 3px;
+    height: 11px;
+    background-color: #3182ce;
+    margin-right: 5px;
+    border-radius: 2px;
+  }
+
+  /* 3-Step Process Flow */
+  .flow-container {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+    margin-bottom: 7px;
+  }
+
+  .flow-box {
+    border: 1px solid #cbd5e0;
+    border-radius: 5px;
+    padding: 4px 6px;
+    background-color: #f7fafc;
+    text-align: center;
+  }
+
+  .flow-box.active {
+    border-color: #3182ce;
+    background-color: #ebf8ff;
+  }
+
+  .flow-step {
+    font-size: 6.8pt;
+    font-weight: 700;
+    color: #2b6cb0;
+    margin-bottom: 1px;
+  }
+
+  .flow-title {
+    font-size: 7.8pt;
+    font-weight: 700;
+    color: #2d3748;
+  }
+
+  .flow-time {
+    font-size: 6.5pt;
+    color: #718096;
+  }
+
+  /* 3 Key Principles Box */
+  .principles-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+    margin-bottom: 7px;
+  }
+
+  .principle-card {
+    border-radius: 5px;
+    padding: 5px 7px;
+    background-color: #fff;
+    border: 1.2px solid #e2e8f0;
+  }
+
+  .p-1 { border-top: 3px solid #38a169; }
+  .p-2 { border-top: 3px solid #3182ce; }
+  .p-3 { border-top: 3px solid #e53e3e; }
+
+  .principle-title {
+    font-size: 7.8pt;
+    font-weight: 700;
+    color: #2d3748;
+    margin-bottom: 2px;
+  }
+
+  .principle-desc {
+    font-size: 7pt;
+    color: #4a5568;
+    line-height: 1.25;
+  }
+
+  /* Motion Cards 2x4 Grid */
+  .motion-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 5px;
+    margin-bottom: 6px;
+  }
+
+  .motion-item {
+    border: 1px solid #e2e8f0;
+    border-radius: 5px;
+    padding: 4px 6px;
+    background-color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .motion-img {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    border-radius: 4px;
+    border: 1px solid #edf2f7;
+    object-fit: contain;
+    background-color: #f7fafc;
+  }
+
+  .motion-info {
+    flex: 1;
+  }
+
+  .motion-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1px;
+  }
+
+  .motion-name {
+    font-size: 7.8pt;
+    font-weight: 700;
+    color: #1a202c;
+  }
+
+  .motion-tag {
+    font-size: 6.5pt;
+    font-weight: 600;
+    color: #4a5568;
+    background-color: #edf2f7;
+    padding: 0.5px 4px;
+    border-radius: 3px;
+  }
+
+  .motion-guide {
+    font-size: 7.2pt;
+    font-weight: 600;
+    color: #2b6cb0;
+    line-height: 1.2;
+  }
+
+  .motion-sub {
+    font-size: 6.7pt;
+    color: #718096;
+    line-height: 1.2;
+  }
+
+  /* Full Width for Jog + Tired Walk */
+  .motion-full {
+    grid-column: span 2;
+    background-color: #fffaf0;
+    border-color: #feebc8;
+  }
+
+  /* Dress & Privacy Box */
+  .info-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-top: 4px;
+  }
+
+  .info-box {
+    border: 1px solid #e2e8f0;
+    border-radius: 5px;
+    padding: 4px 7px;
+    background-color: #f8fafc;
+  }
+
+  .info-box h3 {
+    font-size: 7.6pt;
+    font-weight: 700;
+    color: #2d3748;
+    margin: 0 0 2px 0;
+  }
+
+  .info-box ul {
+    margin: 0;
+    padding-left: 12px;
+    font-size: 6.8pt;
+    color: #4a5568;
+  }
+
+  .info-box li {
+    margin-bottom: 1px;
+  }
+
+  .footer-text {
+    text-align: center;
+    font-size: 6.8pt;
+    color: #a0aec0;
+    margin-top: 5px;
+  }
+</style>
+</head>
+<body>
+
+  <!-- 상단 히어로 배너 -->
+  <div class="hero-banner">
+    <div class="hero-text">
+      <h1>[쌤쌤] 움직임 데이터 촬영 참가자 안내문</h1>
+      <p>나만의 고유한 움직임 지문(Kinematic Bio-Signature) 추출 및 AI 연구</p>
+    </div>
+    <div class="hero-badge">
+      ⏱️ 총 소요시간: 약 18분<br>(세팅 5분 + 촬영 13분)
+    </div>
+  </div>
+
+  <!-- 1. 촬영 진행 순서 (타임라인) -->
+  <div class="section-title"><span></span> 1. 오늘의 촬영 진행 순서</div>
+  <div class="flow-container">
+    <div class="flow-box">
+      <div class="flow-step">STEP 1</div>
+      <div class="flow-title">접수 & 동의서 서명</div>
+      <div class="flow-time">익명 ID 부여 (2분)</div>
+    </div>
+    <div class="flow-box">
+      <div class="flow-step">STEP 2</div>
+      <div class="flow-title">복장 & 측정 확인</div>
+      <div class="flow-time">신장·신발 기록 (2분)</div>
+    </div>
+    <div class="flow-box active">
+      <div class="flow-step">STEP 3</div>
+      <div class="flow-title">8개 동작 촬영</div>
+      <div class="flow-time">안내에 맞춰 진행 (12분)</div>
+    </div>
+    <div class="flow-box">
+      <div class="flow-step">STEP 4</div>
+      <div class="flow-title">품질 검사 & 종료</div>
+      <div class="flow-time">즉석 확인 후 완료 (2분)</div>
+    </div>
+  </div>
+
+  <!-- 2. 참가자 3대 안심 수칙 -->
+  <div class="section-title"><span></span> 2. 이것만 기억해 주세요! (참가자 3대 수칙)</div>
+  <div class="principles-grid">
+    <div class="principle-card p-1">
+      <div class="principle-title">🎯 정답이나 멋진 자세는 NO!</div>
+      <div class="principle-desc">의식해서 예쁘게 걸으려 하지 마세요. 평소 편하게 걷고 움직이시는 <strong>본인 습관 그대로</strong>가 최고의 데이터입니다.</div>
+    </div>
+    <div class="principle-card p-2">
+      <div class="principle-title">🔄 첫 번째는 연습 삼아 편하게!</div>
+      <div class="principle-desc">동작별 4회 촬영 중 <strong>첫 1회차는 자동 폐기</strong>되고 뒤 3회차만 사용됩니다. 처음 어색해도 전혀 걱정하지 마세요.</div>
+    </div>
+    <div class="principle-card p-3">
+      <div class="principle-title">🤫 진행자가 시범을 안 보이는 이유</div>
+      <div class="principle-desc">진행자를 따라 하면 참가자님의 개성이 사라집니다! 진행자는 오직 <strong>'무엇을 할지(목표)'</strong>만 말씀드립니다.</div>
+    </div>
+  </div>
+
+  <!-- 3. 동작별 인포그래픽 안내 -->
+  <div class="section-title"><span></span> 3. 촬영 동작 안내 (총 8종)</div>
+  <div class="motion-grid">
+
+    <!-- M00 -->
+    <div class="motion-item">
+      <img src="images/m00_tpose.png" class="motion-img" alt="캘리브레이션">
+      <div class="motion-info">
+        <div class="motion-head">
+          <span class="motion-name">M00. 기준 골격 등록</span>
+          <span class="motion-tag">15초 · 1회</span>
+        </div>
+        <div class="motion-guide">"T포즈 5초 ➔ 편한 차렷 10초"</div>
+        <div class="motion-sub">골격 치수 기준점 등록 (시연 안내 가능)</div>
+      </div>
+    </div>
+
+    <!-- M01 -->
+    <div class="motion-item">
+      <img src="images/m01_walk.png" class="motion-img" alt="자연 걷기">
+      <div class="motion-info">
+        <div class="motion-head">
+          <span class="motion-name">M01. 자연스럽게 걷기</span>
+          <span class="motion-tag">10초 · 4회</span>
+        </div>
+        <div class="motion-guide">"표시된 곳까지 왕복해서 걷기"</div>
+        <div class="motion-sub">6m 직선 왕복 2회 (평소 걸음걸이 유지)</div>
+      </div>
+    </div>
+
+    <!-- M02 -->
+    <div class="motion-item">
+      <img src="images/m02_reach.png" class="motion-img" alt="손 뻗기">
+      <div class="motion-info">
+        <div class="motion-head">
+          <span class="motion-name">M02. 목표 점에 손 뻗기</span>
+          <span class="motion-tag">10초 · 4회</span>
+        </div>
+        <div class="motion-guide">"벽의 점을 향해 손 뻗었다가 오기"</div>
+        <div class="motion-sub">3회 반복 (왼손/오른손 선택 및 속도 자유)</div>
+      </div>
+    </div>
+
+    <!-- M03 -->
+    <div class="motion-item">
+      <img src="images/m03_speak.png" class="motion-img" alt="설명 대화">
+      <div class="motion-info">
+        <div class="motion-head">
+          <span class="motion-name">M03. 설명하며 말하기</span>
+          <span class="motion-tag">20초 · 4회</span>
+        </div>
+        <div class="motion-guide">"진행자를 보고 편하게 일상 대화"</div>
+        <div class="motion-sub">오늘 아침 일, 영화 등 (손 제스처 자유)</div>
+      </div>
+    </div>
+
+    <!-- M04 -->
+    <div class="motion-item">
+      <img src="images/m04_sit_stand.png" class="motion-img" alt="앉기 서기">
+      <div class="motion-info">
+        <div class="motion-head">
+          <span class="motion-name">M04. 의자에 앉았다 서기</span>
+          <span class="motion-tag">15초 · 4회</span>
+        </div>
+        <div class="motion-guide">"의자에 앉았다 일어나기 3회"</div>
+        <div class="motion-sub">등받이 없는 의자 (손으로 무릎 짚기 자유)</div>
+      </div>
+    </div>
+
+    <!-- M05 -->
+    <div class="motion-item">
+      <img src="images/m05_jump.png" class="motion-img" alt="제자리 뛰기">
+      <div class="motion-info">
+        <div class="motion-head">
+          <span class="motion-name">M05. 제자리에서 뛰기</span>
+          <span class="motion-tag">10초 · 4회</span>
+        </div>
+        <div class="motion-guide">"제자리에서 가볍게 10초 뛰기"</div>
+        <div class="motion-sub">무리하지 않고 가볍게 바운스</div>
+      </div>
+    </div>
+
+    <!-- M06 + M07 Full -->
+    <div class="motion-item motion-full">
+      <img src="images/m06_07_jog_walk.png" class="motion-img" alt="조깅 및 지친 걷기">
+      <div class="motion-info">
+        <div class="motion-head">
+          <span class="motion-name" style="color: #c53030;">M06 + M07. 조깅 & 지친 걷기 세트 (쉬지 않고 즉시 연결!)</span>
+          <span class="motion-tag" style="background-color: #feebc8; color: #c53030;">각 10초 · 3세트</span>
+        </div>
+        <div class="motion-guide" style="color: #c53030;">
+          1단계: "경로를 가볍게 뛰어서 왕복" ➔ 2단계: "쉬지 않고 바로 이어서 걸어서 왕복!"
+        </div>
+        <div class="motion-sub">
+          ※ 실제 약간 숨찬 상태의 자연스러운 걸음을 측정합니다. 지친 척 연기하지 마시고 실제 느낌대로 편하게 걸어주세요.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 4. 복장 가이드 & 개인정보 보호 안내 -->
+  <div class="info-columns">
+    <div class="info-box">
+      <h3>👕 복장 및 신발 안내</h3>
+      <ul>
+        <li><strong>권장:</strong> 관절 위치가 잘 보이는 슬림한 운동복/티셔츠, 편한 운동화</li>
+        <li><strong>금지:</strong> 펄럭이는 치마/롱코트, 오버핏 헐렁한 옷, 모자/후드티 착용</li>
+        <li>촬영 세션 동안에는 <strong>동일한 신발</strong>을 유지해 주세요.</li>
+      </ul>
+    </div>
+    <div class="info-box">
+      <h3>🔒 철저한 개인정보 비식별 보호</h3>
+      <ul>
+        <li>참가자님의 실명과 연락처는 분리되어 별도 보안 금고에 안전 보관됩니다.</li>
+        <li>연구 데이터에는 오직 <strong>익명 ID(예: P015)</strong>만 부여되어 분석됩니다.</li>
+        <li>문의 사항은 현장 진행자에게 언제든 편하게 말씀해 주세요.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer-text">
+    쌤쌤(SAMSAM) 움직임 지문 연구 프로젝트 | 소중한 시간 내어 참여해 주셔서 진심으로 감사드립니다!
+  </div>
+
+</body>
+</html>

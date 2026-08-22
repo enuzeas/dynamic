@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>쌤쌤 모션 데이터 수집 및 활용 동의서</title>
+<style>
+  @page {
+    size: A4 portrait;
+    margin: 8mm 10mm 8mm 10mm;
+  }
+
+  * {
+    box-sizing: border-box;
+    -webkit-print-color-adjust: exact;
+  }
+
+  body {
+    font-family: "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+    font-size: 8pt;
+    line-height: 1.3;
+    color: #222;
+    margin: 0;
+    padding: 0;
+  }
+
+  .header {
+    text-align: center;
+    border-bottom: 2px solid #1a365d;
+    padding-bottom: 4px;
+    margin-bottom: 6px;
+  }
+
+  .header h1 {
+    font-size: 14pt;
+    font-weight: 700;
+    color: #1a365d;
+    margin: 0 0 2px 0;
+    letter-spacing: -0.5px;
+  }
+
+  .header p {
+    font-size: 7.5pt;
+    color: #4a5568;
+    margin: 0;
+  }
+
+  .notice-box {
+    background-color: #f7fafc;
+    border-left: 3px solid #2b6cb0;
+    padding: 3px 7px;
+    font-size: 7.4pt;
+    color: #2d3748;
+    margin-bottom: 5px;
+    line-height: 1.25;
+  }
+
+  .section-title {
+    font-size: 8.8pt;
+    font-weight: 700;
+    color: #1a202c;
+    margin-top: 5px;
+    margin-bottom: 2px;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 1px 4px;
+    font-size: 6.8pt;
+    font-weight: 700;
+    border-radius: 3px;
+    margin-right: 3px;
+    vertical-align: middle;
+  }
+
+  .badge-required {
+    background-color: #e53e3e;
+    color: white;
+  }
+
+  .badge-optional {
+    background-color: #2b6cb0;
+    color: white;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 2px;
+    font-size: 7.5pt;
+  }
+
+  th, td {
+    border: 1px solid #cbd5e0;
+    padding: 2.5px 5px;
+    vertical-align: middle;
+  }
+
+  th {
+    background-color: #edf2f7;
+    font-weight: 600;
+    color: #2d3748;
+    text-align: center;
+  }
+
+  .table-info th {
+    width: 15%;
+  }
+  .table-info td {
+    width: 35%;
+  }
+
+  .check-row {
+    background-color: #f8fafc;
+    border: 1px solid #cbd5e0;
+    padding: 2.5px 6px;
+    margin-bottom: 5px;
+    font-size: 7.5pt;
+    font-weight: 600;
+    overflow: hidden;
+  }
+
+  .check-question {
+    float: left;
+    color: #2d3748;
+  }
+
+  .check-options {
+    float: right;
+  }
+
+  .check-box-item {
+    display: inline-block;
+    margin-left: 10px;
+  }
+
+  .square {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border: 1.2px solid #4a5568;
+    vertical-align: middle;
+    margin-right: 2px;
+    background-color: white;
+  }
+
+  .signature-area {
+    margin-top: 6px;
+    border: 1.5px solid #2b6cb0;
+    background-color: #fff;
+    padding: 6px 10px;
+  }
+
+  .sig-statement {
+    text-align: center;
+    font-weight: 600;
+    font-size: 8pt;
+    margin-bottom: 4px;
+    color: #1a365d;
+  }
+
+  .sig-date {
+    text-align: center;
+    font-size: 8pt;
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+
+  .sig-grid {
+    width: 100%;
+    margin-bottom: 0;
+  }
+
+  .sig-grid td {
+    border: none;
+    padding: 1px 3px;
+    font-size: 7.8pt;
+  }
+
+  .sig-line {
+    display: inline-block;
+    min-width: 100px;
+    border-bottom: 1px solid #4a5568;
+    margin: 0 4px;
+  }
+
+  .footer-note {
+    font-size: 6.8pt;
+    color: #718096;
+    margin-top: 4px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>[쌤쌤] 모션 데이터 수집 및 연구·활용 동의서</h1>
+    <p>개인 움직임 지문(Bio-Signature) 추출 및 AI 모션 분석 모델 연구·개발</p>
+  </div>
+
+  <div class="notice-box">
+    <strong>개인정보 분리 보관:</strong> 실명·연락처는 연구 데이터와 엄격히 분리되어 별도 보안 저장소(<code>consent/id_mapping.csv</code>)에 독립 보관되며, AI 모델 학습 및 메타데이터에는 <strong>'참가자 ID(익명 식별자)'</strong>만 부여되어 완벽히 비식별 처리됩니다.
+  </div>
+
+  <!-- 1. 기본 정보 -->
+  <div class="section-title">1. 참가자 기본 인적사항 및 측정 정보</div>
+  <table class="table-info">
+    <tr>
+      <th>성 명</th>
+      <td>&nbsp;</td>
+      <th>연 락 처</th>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <th>생년월일 / 성별</th>
+      <td>&nbsp;&nbsp;&nbsp;&nbsp;년 &nbsp;&nbsp;월 &nbsp;&nbsp;일 &nbsp;/&nbsp; ( 남 · 여 )</td>
+      <th>참가자 ID (기재란)</th>
+      <td><strong>P</strong></td>
+    </tr>
+    <tr>
+      <th>신 장 (키)</th>
+      <td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; cm</td>
+      <th>착용 신발 종류</th>
+      <td>(예: 러닝화, 스니커즈, 단화 등)</td>
+    </tr>
+  </table>
+
+  <!-- 2. 필수: 개인정보 수집/이용 -->
+  <div class="section-title"><span class="badge badge-required">필수</span> 2. 개인정보(영상·음성·신체정보) 수집 및 이용 동의</div>
+  <table>
+    <tr>
+      <th style="width: 24%;">수집 항목</th>
+      <th style="width: 52%;">수집 및 이용 목적</th>
+      <th style="width: 24%;">보유 및 이용 기간</th>
+    </tr>
+    <tr>
+      <td>• 전신 촬영 동영상 및 음성<br>&nbsp;&nbsp;(캘리브레이션 및 동작 7종)<br>• 신장, 신체 비율, 착용 복장/신발<br>• 당일 신체 컨디션 및 특이사항</td>
+      <td>• 개인별 관절 가동 범위(ROM), 무게중심(CoM) 이동 등 동작 분석<br>• 2D/3D 골격 랜드마크 추출 및 AI 모션 분석 모델 학습·검증</td>
+      <td style="text-align: center;"><strong>수집일로부터 5년</strong><br><span style="font-size: 6.8pt; color: #666;">(연구 완료 및 비식별화 후 파기)</span></td>
+    </tr>
+  </table>
+  <div class="check-row">
+    <div class="check-question">위 내용에 대한 개인정보(영상·음성·신체정보) 수집 및 이용에 동의하십니까?</div>
+    <div class="check-options">
+      <span class="check-box-item"><span class="square"></span> 동의함</span>
+      <span class="check-box-item"><span class="square"></span> 동의하지 않음</span>
+    </div>
+  </div>
+
+  <!-- 3. 필수: 바이오정보 처리 -->
+  <div class="section-title"><span class="badge badge-required">필수</span> 3. 고유 움직임 바이오정보(Bio-Signature) 처리 동의</div>
+  <table>
+    <tr>
+      <th style="width: 24%;">처리 항목</th>
+      <th style="width: 52%;">처리 목적</th>
+      <th style="width: 24%;">보유 및 이용 기간</th>
+    </tr>
+    <tr>
+      <td>• 골격 치수, 관절 가동 범위(ROM)<br>• 무게중심(CoM) 궤적, 저크(Jerk) 신호<br>• 관절 간 위상차 등 개인 모션 특징</td>
+      <td>• 동작 아이덴티티(Kinematic Identity) 모델링 및 등록 절차 연구<br>• 다중 동작 결합을 통한 개인 재식별 및 유사도 검증 알고리즘 고도화</td>
+      <td style="text-align: center;"><strong>개인정보 보유 기간과 동일</strong><br><span style="font-size: 6.8pt; color: #666;">(비식별 특징 벡터로 관리)</span></td>
+    </tr>
+  </table>
+  <div class="check-row">
+    <div class="check-question">위와 같이 고유 움직임 바이오정보를 처리하는 것에 동의하십니까?</div>
+    <div class="check-options">
+      <span class="check-box-item"><span class="square"></span> 동의함</span>
+      <span class="check-box-item"><span class="square"></span> 동의하지 않음</span>
+    </div>
+  </div>
+
+  <!-- 4. 필수: 연구 데이터 저장 및 적용 -->
+  <div class="section-title"><span class="badge badge-required">필수</span> 4. 연구 데이터의 저장, 가공 및 연구 적용 동의</div>
+  <table>
+    <tr>
+      <th style="width: 20%;">항 목</th>
+      <th style="width: 80%;">내 용</th>
+    </tr>
+    <tr>
+      <td><strong>가공 및 적용</strong></td>
+      <td>수집 영상으로부터 3D 모션 추출, 골격 정규화 파이프라인 적용, 교차 카메라 검증 및 학술 연구, 논문 발표 활용</td>
+    </tr>
+    <tr>
+      <td><strong>저장 및 보안</strong></td>
+      <td>암호화된 연구 데이터베이스 내 보관, 비인가자 접근 통제 및 내부 보안 관리 규정 준수</td>
+    </tr>
+  </table>
+  <div class="check-row">
+    <div class="check-question">위 연구 목적의 데이터 저장, 가공 및 적용에 동의하십니까?</div>
+    <div class="check-options">
+      <span class="check-box-item"><span class="square"></span> 동의함</span>
+      <span class="check-box-item"><span class="square"></span> 동의하지 않음</span>
+    </div>
+  </div>
+
+  <!-- 5. 선택: 상업적 이용 -->
+  <div class="section-title"><span class="badge badge-optional">선택</span> 5. 상업적 목적 활용 및 제품 서비스 적용 동의 (consent_commercial)</div>
+  <table>
+    <tr>
+      <th style="width: 20%;">항 목</th>
+      <th style="width: 80%;">내 용</th>
+    </tr>
+    <tr>
+      <td><strong>상업적 활용</strong></td>
+      <td>향후 '쌤쌤' 상용 서비스·솔루션 개발, 상용 AI 엔진 탑재, 제품 내 개인 동작 등록/인식 기능 적용 및 사업화</td>
+    </tr>
+    <tr>
+      <td><strong>대상 데이터</strong></td>
+      <td>비식별 처리된 모션 특징 벡터 및 학습된 모델 가중치 (실명/연락처는 절대 상업용으로 제공되지 않음)</td>
+    </tr>
+  </table>
+  <div class="check-row">
+    <div class="check-question">비식별화된 모션 데이터의 상업적 제품/서비스 활용에 동의하십니까?</div>
+    <div class="check-options">
+      <span class="check-box-item"><span class="square"></span> 동의함</span>
+      <span class="check-box-item"><span class="square"></span> 동의하지 않음</span>
+    </div>
+  </div>
+
+  <!-- 6. 선택: S2 재촬영 -->
+  <div class="section-title"><span class="badge badge-optional">선택</span> 6. 지문 검증을 위한 2차 재촬영 세션(S2) 참여 의향</div>
+  <table style="margin-bottom: 2px;">
+    <tr>
+      <td style="background-color: #fafafa; font-size: 7.2pt; color: #4a5568;">
+        • <strong>목적:</strong> 1~2주 뒤 조건(의상·시간대 등) 변화 후에도 고유 움직임 지문이 재현되는지 검증 (약 15분 소요, 추가 사례비 지급)
+      </td>
+    </tr>
+  </table>
+  <div class="check-row">
+    <div class="check-question">향후 2차 재촬영 세션(S2) 참여 의향이 있으십니까?</div>
+    <div class="check-options">
+      <span class="check-box-item"><span class="square"></span> 참여 희망 (일정 협의)</span>
+      <span class="check-box-item"><span class="square"></span> 참여 의사 없음</span>
+    </div>
+  </div>
+
+  <!-- 서명 영역 -->
+  <div class="signature-area">
+    <div class="sig-statement">
+      본인은 본 동의서의 내용을 충분히 이해하였으며, 각 항목별 선택에 따라 데이터 수집 및 활용에 동의합니다.
+    </div>
+    <div class="sig-date">
+      2026 년 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 월 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 일
+    </div>
+    <table class="sig-grid">
+      <tr>
+        <td style="width: 50%; text-align: left;">
+          <strong>정보주체(참가자) 성명:</strong> <span class="sig-line"></span> (서명 또는 인)
+        </td>
+        <td style="width: 50%; text-align: right;">
+          <strong>촬영 진행자(확인자) 성명:</strong> <span class="sig-line"></span> (서명 또는 인)
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="footer-note">
+    쌤쌤(SAMSAM) 연구개발팀 | 귀하는 상기 동의를 거부할 권리가 있으며, 필수 항목 거부 시 촬영 참가가 제한될 수 있습니다.
+  </div>
+
+</body>
+</html>

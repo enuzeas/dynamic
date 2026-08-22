@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>쌤쌤 모션 데이터 촬영 동작 안내 가이드</title>
+<style>
+  @page {
+    size: A4 portrait;
+    margin: 8mm 10mm 8mm 10mm;
+  }
+
+  * {
+    box-sizing: border-box;
+    -webkit-print-color-adjust: exact;
+  }
+
+  body {
+    font-family: "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+    color: #1a202c;
+    margin: 0;
+    padding: 0;
+    background-color: #ffffff;
+    font-size: 8pt;
+    line-height: 1.35;
+  }
+
+  .header {
+    text-align: center;
+    border-bottom: 2.5px solid #2b6cb0;
+    padding-bottom: 4px;
+    margin-bottom: 6px;
+  }
+
+  .header h1 {
+    font-size: 15pt;
+    font-weight: 800;
+    color: #1a365d;
+    margin: 0 0 2px 0;
+    letter-spacing: -0.5px;
+  }
+
+  .header .subtitle {
+    font-size: 8pt;
+    color: #4a5568;
+    font-weight: 500;
+  }
+
+  .tip-banner {
+    background: linear-gradient(90deg, #ebf8ff 0%, #f7fafc 100%);
+    border-left: 3.5px solid #3182ce;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 7.6pt;
+    color: #2b6cb0;
+    margin-bottom: 7px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .tip-banner strong {
+    color: #1a365d;
+  }
+
+  /* Grid Layout for Cards */
+  .grid-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+
+  .action-card {
+    border: 1.2px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 5px 7px;
+    background-color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #edf2f7;
+    padding-bottom: 3px;
+    margin-bottom: 4px;
+  }
+
+  .card-title {
+    font-size: 8.5pt;
+    font-weight: 700;
+    color: #2d3748;
+    display: flex;
+    align-items: center;
+  }
+
+  .badge-id {
+    display: inline-block;
+    background-color: #2b6cb0;
+    color: white;
+    font-size: 6.8pt;
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 3px;
+    margin-right: 4px;
+  }
+
+  .badge-calib {
+    background-color: #805ad5;
+  }
+
+  .badge-vital {
+    background-color: #e53e3e;
+  }
+
+  .badge-time {
+    font-size: 7pt;
+    color: #718096;
+    background-color: #f7fafc;
+    border: 1px solid #e2e8f0;
+    padding: 1px 4px;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+
+  .card-body {
+    display: flex;
+    gap: 7px;
+    align-items: center;
+  }
+
+  .card-img-wrap {
+    width: 62px;
+    height: 62px;
+    flex-shrink: 0;
+    border-radius: 4px;
+    border: 1px solid #edf2f7;
+    background-color: #faf5ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .card-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .card-content {
+    flex: 1;
+  }
+
+  .guide-quote {
+    font-size: 7.8pt;
+    font-weight: 700;
+    color: #1a365d;
+    margin-bottom: 2px;
+    line-height: 1.25;
+  }
+
+  .guide-desc {
+    font-size: 7.1pt;
+    color: #4a5568;
+    line-height: 1.25;
+  }
+
+  .guide-note {
+    font-size: 6.7pt;
+    color: #c53030;
+    margin-top: 2px;
+    font-weight: 500;
+  }
+
+  /* Full width card for 6+7 combo */
+  .card-span-2 {
+    grid-column: span 2;
+  }
+
+  .footer-summary {
+    margin-top: 6px;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 6.8pt;
+    color: #718096;
+  }
+</style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>[쌤쌤] 데이터 촬영 동작 가이드 (참가자용)</h1>
+    <div class="subtitle">총 8가지 동작 안내 (소요시간 약 13분) | 일상 습관 그대로 편안하게 움직여 주세요!</div>
+  </div>
+
+  <div class="tip-banner">
+    <div><strong>📢 핵심 원칙:</strong> 정답이나 멋진 자세는 없습니다. 의식해서 예쁘게 하려 하지 마시고 평소 하시는 방식대로 편하게 움직여 주세요!</div>
+    <div style="font-weight: 600; color: #e53e3e;">※ 1~5번 동작은 첫 회 폐기 (총 4회 중 3회 사용)</div>
+  </div>
+
+  <div class="grid-container">
+
+    <!-- 0. 캘리브레이션 -->
+    <div class="action-card">
+      <div class="card-header">
+        <div class="card-title">
+          <span class="badge-id badge-calib">M00</span> 기준 골격 등록 (캘리브레이션)
+        </div>
+        <span class="badge-time">⏱️ 15초 · 1회</span>
+      </div>
+      <div class="card-body">
+        <div class="card-img-wrap" style="background-color: #f7fafc;">
+          <img src="images/m00_tpose.png" class="card-img" alt="T포즈">
+        </div>
+        <div class="card-content">
+          <div class="guide-quote">"양팔 벌려 5초, 팔 내리고 편하게 10초"</div>
+          <div class="guide-desc">팔을 양옆으로 벌려 T자 포즈를 5초간 유지한 뒤, 팔을 내리고 편안한 차렷 자세로 10초간 가만히 정지합니다.</div>
+          <div class="guide-note">※ 신체 기준 치수 측정을 위해 흔들림 없이 서 주세요.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1. 자연 걷기 -->
+    <div class="action-card">
+      <div class="card-header">
+        <div class="card-title">
+          <span class="badge-id">M01</span> 자연스럽게 걷기
+        </div>
+        <span class="badge-time">⏱️ 10초 · 4회</span>
+      </div>
+      <div class="card-body">
+        <div class="card-img-wrap">
+          <img src="images/m01_walk.png" class="card-img" alt="자연 걷기">
+        </div>
+        <div class="card-content">
+          <div class="guide-quote">"저기 표시된 곳까지 편하게 걸어가세요"</div>
+          <div class="guide-desc">바닥에 표시된 6m 반환점까지 평소 걸음걸이대로 자연스럽게 걸어갔다가 돌아옵니다. (왕복 2회)</div>
+          <div class="guide-note">※ 팔 흔들기나 보폭을 일부러 조절하지 마세요.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. 손 뻗기 -->
+    <div class="action-card">
+      <div class="card-header">
+        <div class="card-title">
+          <span class="badge-id">M02</span> 목표 점을 향해 손 뻗기
+        </div>
+        <span class="badge-time">⏱️ 10초 · 4회</span>
+      </div>
+      <div class="card-body">
+        <div class="card-img-wrap">
+          <img src="images/m02_reach.png" class="card-img" alt="손 뻗기">
+        </div>
+        <div class="card-content">
+          <div class="guide-quote">"벽의 점을 향해 손을 뻗었다 가져오세요"</div>
+          <div class="guide-desc">벽면에 부착된 점 스티커를 향해 손을 뻗었다가 원래 자세로 가져옵니다. (3회 반복)</div>
+          <div class="guide-note">※ 왼손/오른손 선택과 뻗는 속도는 자유입니다.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. 설명하며 말하기 -->
+    <div class="action-card">
+      <div class="card-header">
+        <div class="card-title">
+          <span class="badge-id">M03</span> 설명하며 말하기
+        </div>
+        <span class="badge-time">⏱️ 20초 · 4회</span>
+      </div>
+      <div class="card-body">
+        <div class="card-img-wrap">
+          <img src="images/m03_speak.png" class="card-img" alt="설명하며 말하기">
+        </div>
+        <div class="card-content">
+          <div class="guide-quote">"오늘 아침에 뭐 하셨는지 이야기해 주세요"</div>
+          <div class="guide-desc">카메라가 아닌 진행자를 바라보고 편안하게 일상 대화를 합니다. (최근 본 영화, 오는 길 등)</div>
+          <div class="guide-note">※ 손 제스처를 억지로 쓰거나 참지 마세요.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. 앉았다 일어서기 -->
+    <div class="action-card">
+      <div class="card-header">
+        <div class="card-title">
+          <span class="badge-id">M04</span> 의자에 앉았다 일어서기
+        </div>
+        <span class="badge-time">⏱️ 15초 · 4회</span>
+      </div>
+      <div class="card-body">
+        <div class="card-img-wrap">
+          <img src="images/m04_sit_stand.png" class="card-img" alt="앉았다 일어서기">
+        </div>
+        <div class="card-content">
+          <div class="guide-quote">"의자에 앉았다 일어나기를 3번 해주세요"</div>
+          <div class="guide-desc">등받이와 팔걸이가 없는 의자에 자연스럽게 앉았다가 일어납니다. (3회 반복)</div>
+          <div class="guide-note">※ 손으로 무릎을 짚거나 떼는 것 모두 자유입니다.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. 제자리 뛰기 -->
+    <div class="action-card">
+      <div class="card-header">
+        <div class="card-title">
+          <span class="badge-id">M05</span> 제자리에서 가볍게 뛰기
+        </div>
+        <span class="badge-time">⏱️ 10초 · 4회</span>
+      </div>
+      <div class="card-body">
+        <div class="card-img-wrap">
+          <img src="images/m05_jump.png" class="card-img" alt="제자리 뛰기">
+        </div>
+        <div class="card-content">
+          <div class="guide-quote">"제자리에서 10초 정도 뛰어주세요"</div>
+          <div class="guide-desc">바닥 위치에서 벗어나지 않고 제자리에서 가볍게 리듬을 타며 10초간 뜁니다.</div>
+          <div class="guide-note">※ 높이 뛰려 애쓰지 마시고 편한 강도로 뛰어주세요.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6 + 7 세트 (Full Width) -->
+    <div class="action-card card-span-2" style="border: 1.5px solid #feb2b2; background-color: #fffaf0;">
+      <div class="card-header" style="border-bottom: 1px solid #feebc8;">
+        <div class="card-title">
+          <span class="badge-id badge-vital">M06 + M07</span> 조깅 & 지친 걷기 세트 (쉬지 않고 즉시 연결!)
+        </div>
+        <span class="badge-time" style="background-color: #fff; color: #c53030;">⏱️ 각 10초 · 총 3세트 (전량 사용)</span>
+      </div>
+      <div class="card-body">
+        <div class="card-img-wrap" style="width: 75px; height: 75px; background-color: #fff;">
+          <img src="images/m06_07_jog_walk.png" class="card-img" alt="조깅 및 지친 걷기">
+        </div>
+        <div class="card-content">
+          <div class="guide-quote" style="color: #c53030;">
+            1단계 [M06 조깅]: "아까 걸으셨던 경로를 가볍게 뛰어서 갔다 오세요."<br>
+            2단계 [M07 지친 걷기]: "네, 바로 이어서 다시 걸어서 갔다 와주세요!" (쉬지 않고 즉시)
+          </div>
+          <div class="guide-desc" style="margin-top: 3px;">
+            가볍게 뛴 직후 숨이 차거나 피로한 상태의 진짜 걸음걸이를 측정하는 구간입니다.
+          </div>
+          <div class="guide-note">
+            ⚠️ <strong>절대 주의:</strong> "지친 척" 연기하지 마시고, 조깅 직후 실제 몸 상태 그대로 편안히 걸어주세요.
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer-summary">
+    <div>쌤쌤(SAMSAM) 움직임 지문 연구 프로젝트 | 문의: 연구팀 담당자</div>
+    <div>* 1~5번 동작은 참가자 ID 끝자리에 따라 순환 순서로 진행됩니다.</div>
+  </div>
+
+</body>
+</html>

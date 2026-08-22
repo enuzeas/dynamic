@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>쌤쌤 모션 데이터 촬영자 현장 운영 가이드</title>
+<style>
+  @page {
+    size: A4 portrait;
+    margin: 7mm 9mm 7mm 9mm;
+  }
+
+  * {
+    box-sizing: border-box;
+    -webkit-print-color-adjust: exact;
+  }
+
+  body {
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+    color: #1e293b;
+    margin: 0;
+    padding: 0;
+    background-color: #ffffff;
+    font-size: 7.7pt;
+    line-height: 1.35;
+  }
+
+  .page {
+    width: 100%;
+    min-height: 283mm;
+    max-height: 283mm;
+    overflow: hidden;
+    position: relative;
+    page-break-after: always;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .page:last-child {
+    page-break-after: avoid;
+  }
+
+  /* Header Section */
+  .header-banner {
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 60%, #2563eb 100%);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .header-title h1 {
+    font-size: 13.5pt;
+    font-weight: 800;
+    margin: 0 0 2px 0;
+    letter-spacing: -0.4px;
+  }
+
+  .header-title p {
+    font-size: 7.5pt;
+    margin: 0;
+    opacity: 0.9;
+    font-weight: 400;
+  }
+
+  .header-meta {
+    text-align: right;
+    font-size: 7pt;
+    opacity: 0.85;
+    line-height: 1.3;
+  }
+
+  .badge-tag {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 700;
+    margin-bottom: 2px;
+  }
+
+  /* Section Title */
+  .section-title {
+    font-size: 9.2pt;
+    font-weight: 800;
+    color: #0f172a;
+    border-left: 3.5px solid #2563eb;
+    padding-left: 6px;
+    margin: 5px 0 4px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .section-title .desc {
+    font-size: 7pt;
+    font-weight: 400;
+    color: #64748b;
+  }
+
+  /* Core Rules Banner */
+  .core-rules-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+    margin-bottom: 6px;
+  }
+
+  .rule-card {
+    border-radius: 5px;
+    padding: 5px 7px;
+    font-size: 7.2pt;
+    line-height: 1.25;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  }
+
+  .rule-card.red {
+    background-color: #fef2f2;
+    border: 1.2px solid #fca5a5;
+    color: #991b1b;
+  }
+
+  .rule-card.blue {
+    background-color: #eff6ff;
+    border: 1.2px solid #93c5fd;
+    color: #1e40af;
+  }
+
+  .rule-card.amber {
+    background-color: #fffbeb;
+    border: 1.2px solid #fcd34d;
+    color: #92400e;
+  }
+
+  .rule-card.emerald {
+    background-color: #ecfdf5;
+    border: 1.2px solid #6ee7b7;
+    color: #065f46;
+  }
+
+  .rule-card strong {
+    display: block;
+    font-size: 7.8pt;
+    margin-bottom: 2px;
+  }
+
+  /* Grid Layouts */
+  .grid-2col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 5px;
+  }
+
+  .grid-3col {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 5px;
+  }
+
+  .box-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 5px;
+    padding: 5px 7px;
+    background-color: #f8fafc;
+  }
+
+  .box-card-title {
+    font-size: 7.8pt;
+    font-weight: 700;
+    color: #1e293b;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 3px;
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  /* Checklist items */
+  .chk-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .chk-list li {
+    position: relative;
+    padding-left: 12px;
+    margin-bottom: 2.5px;
+    font-size: 7.2pt;
+    line-height: 1.25;
+  }
+
+  .chk-list li::before {
+    content: "■";
+    position: absolute;
+    left: 0;
+    color: #3b82f6;
+    font-size: 5.5pt;
+    top: 2px;
+  }
+
+  .chk-list li.warn::before {
+    color: #ef4444;
+  }
+
+  .chk-list li.ok::before {
+    color: #10b981;
+  }
+
+  /* Diagram Box */
+  .diagram-box {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-family: monospace;
+    font-size: 6.6pt;
+    line-height: 1.15;
+    margin: 3px 0;
+    text-align: center;
+  }
+
+  /* Script Table */
+  .script-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 7.2pt;
+    margin-bottom: 4px;
+  }
+
+  .script-table th {
+    background-color: #f1f5f9;
+    color: #334155;
+    font-weight: 700;
+    border: 1px solid #cbd5e1;
+    padding: 3px 5px;
+    text-align: center;
+  }
+
+  .script-table td {
+    border: 1px solid #e2e8f0;
+    padding: 3.5px 5px;
+    vertical-align: middle;
+    line-height: 1.25;
+  }
+
+  .badge-id {
+    font-weight: 800;
+    background-color: #1e3a8a;
+    color: white;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 6.8pt;
+    display: inline-block;
+  }
+
+  .badge-meta {
+    font-weight: 600;
+    background-color: #f1f5f9;
+    color: #475569;
+    padding: 1px 3px;
+    border-radius: 2px;
+    font-size: 6.5pt;
+    border: 1px solid #cbd5e1;
+  }
+
+  .script-speech {
+    color: #0369a1;
+    font-weight: 600;
+  }
+
+  .script-dont {
+    color: #b91c1c;
+    font-size: 6.8pt;
+    display: block;
+    margin-top: 1px;
+  }
+
+  .footer-note {
+    border-top: 1px dashed #cbd5e1;
+    padding-top: 3px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 6.6pt;
+    color: #94a3b8;
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= PAGE 1 ================= -->
+<div class="page">
+  <div>
+    <!-- Header Banner -->
+    <div class="header-banner">
+      <div class="header-title">
+        <h1>쌤쌤(SsamSsam) 모션 데이터 촬영자 운영 가이드</h1>
+        <p>인간 고유 움직임 지문(Kinematic Identity) 수집을 위한 현장 디렉팅 및 장비 운영 매뉴얼</p>
+      </div>
+      <div class="header-meta">
+        <span class="badge-tag">현장 운영용 / 비밀유지</span><br>
+        1인 소요: 약 18분 (세팅 5분 + 촬영 13분)<br>
+        카메라 2대(F/D) 동시 레코딩 (60fps)
+      </div>
+    </div>
+
+    <!-- 1. 핵심 촬영 철학 및 4대 원칙 -->
+    <div class="section-title">
+      <span>1. 촬영 디렉터 핵심 원칙 (왜 이렇게 찍는가?)</span>
+      <span class="desc">움직임 지문은 '정적 구조'가 아닌 '무의식적 동적 신호'에서 추출됩니다</span>
+    </div>
+
+    <div class="core-rules-grid">
+      <div class="rule-card red">
+        <strong>① 동작 시연 절대 금지</strong>
+        촬영자가 시연하는 순간 참가자는 모방하게 되며, 참가자가 아닌 <b>'촬영자의 스타일'</b>이 학습됩니다. (0번만 예외)
+      </div>
+      <div class="rule-card amber">
+        <strong>② 방식(How) 아닌 목표(What)만</strong>
+        "팔을 이렇게 흔드세요" ✕<br>
+        "저기까지 걸어갔다 오세요" ◯<br>
+        방식을 지시하면 개인차가 소멸합니다.
+      </div>
+      <div class="rule-card blue">
+        <strong>③ 첫 테이크 폐기 (1~5번)</strong>
+        첫 회차는 카메라 긴장과 어색함이 지배합니다. <b>4회 촬영 후 1회차는 무조건 버리고 2~4회차(3회)를 사용</b>합니다.
+      </div>
+      <div class="rule-card emerald">
+        <strong>④ 순서 순환 (긴장 분산)</strong>
+        1~5번 동작은 참가자마다 순서를 섞어 진행합니다. 동일 순서 반복 시 긴장 노이즈가 특정 동작에 고착됩니다.
+      </div>
+    </div>
+
+    <!-- 2. 장비 세팅 & 동선 구성 -->
+    <div class="section-title">
+      <span>2. 하드웨어 세팅 & 공간 배치 기준</span>
+      <span class="desc">정면(CAM-F) + 45도(CAM-D) 교차 검증 / 60fps 고정</span>
+    </div>
+
+    <div class="grid-3col">
+      <!-- 카메라 세팅 -->
+      <div class="box-card">
+        <div class="box-card-title"><span>카메라 설정 (2대 동일)</span><span style="color:#2563eb;">필수값</span></div>
+        <ul class="chk-list">
+          <li class="ok"><b>프레임레이트: 60 fps 고정</b> (30fps 불가)</li>
+          <li class="ok"><b>해상도: 1080p 이상</b> (FHD/4K)</li>
+          <li class="warn"><b>자동 초점(AF) OFF</b> → 수동 초점 고정</li>
+          <li class="warn"><b>손떨림 보정(OIS/EIS) OFF</b> → 좌표계 왜곡 방지</li>
+          <li><b>화각/구도:</b> 전신 풀바디 + 상하좌우 여백 확보</li>
+          <li><b>배터리/메모리:</b> 잔여 용량 64GB 이상 점검</li>
+        </ul>
+      </div>
+
+      <!-- 동선 및 배치도 -->
+      <div class="box-card">
+        <div class="box-card-title"><span>공간 동선 (직선 6m)</span><span>높이 1.2m</span></div>
+        <div class="diagram-box">
+[배경: 단색 벽 / 불필요한 물체 제거]<br>
+●───────────── 6m ─────────────●<br>
+출발선                         반환선<br><br>
+        ┌──────┐       ┌──────┐<br>
+        │CAM-F │       │CAM-D │ (45° 측면)<br>
+        │정 면 │       │      │<br>
+        └──────┘       └──────┘<br>
+        거리: 4~5m / 삼각대 높이: 허리선(1.2m)
+        </div>
+        <ul class="chk-list">
+          <li>바닥에 테이프로 출발선/반환선 정확히 마킹</li>
+          <li>손 뻗기 타겟: 벽면 1.4m 높이에 컬러 스티커 부착</li>
+        </ul>
+      </div>
+
+      <!-- 동기화 및 조명 -->
+      <div class="box-card">
+        <div class="box-card-title"><span>싱크 및 환경 제어</span><span>오디오 큐</span></div>
+        <ul class="chk-list">
+          <li class="warn"><b>테이크 시작 시 '박수 1회(클랩)' 필수</b><br>→ 오디오 파형 피크로 두 카메라 싱크 정렬</li>
+          <li><b>조명:</b> 피사체 정면/측면 균일 배광 (역광 금지)</li>
+          <li><b>배경:</b> 창문 역광 차단, 움직이는 인원 통제</li>
+          <li><b>소음 통제:</b> 발소리 및 안내 음성 외 주변음 최소화</li>
+          <li><b>테스트 샷:</b> 참가자 도착 전 1회 녹화 후 재생 점검</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 3. 참가자 접수 & 식별/복장 스크리닝 -->
+    <div class="section-title">
+      <span>3. 참가자 수속 & 복장/익명성 프로토콜</span>
+      <span class="desc">개인정보 보호법 준수 및 관절 랜드마크 인식률 확보</span>
+    </div>
+
+    <div class="grid-2col">
+      <div class="box-card">
+        <div class="box-card-title"><span>접수 및 익명 ID 관리</span><span style="color:#ef4444;">보안 절대수칙</span></div>
+        <ul class="chk-list">
+          <li><b>동의서 징구:</b> 수집/저장/학습적용/상업이용 <b>각 항목 개별 체크</b> 및 자필 서명 확인</li>
+          <li class="warn"><b>익명 ID 부여:</b> P001, P002 순차 부여 (현장 네임택 부착)</li>
+          <li class="warn"><b>실명 격리:</b> 실명↔ID 대응표는 별도 잠금 폴더에 보관. <b>촬영 파일명, 영상 메타데이터, 녹음 음성에 실명 언급/기록 절대 금지</b></li>
+          <li><b>신체 메타 기록:</b> 성별, 연령대, 신장, 착용 신발 종류(운동화/단화 등) 기록표 기재</li>
+        </ul>
+      </div>
+
+      <div class="box-card">
+        <div class="box-card-title"><span>복장 스크리닝 (미충족 시 촬영 불가)</span><span style="color:#2563eb;">체크 항목</span></div>
+        <ul class="chk-list">
+          <li class="warn"><b>오버핏/헐렁한 옷 금지:</b> 무릎·팔꿈치 라인이 드러나는 슬림핏 착용</li>
+          <li class="warn"><b>치마, 원피스, 롱패딩/코트 착용 불가:</b> 상·하체 관절 추정 실패 유발</li>
+          <li class="warn"><b>모자, 후드티, 선글라스 착용 금지:</b> 두부/안면 랜드마크 가림</li>
+          <li><b>신발 일관성:</b> 세션 내내 <b>동일한 신발</b> 착용 (동작 신호 변동 방지)</li>
+          <li><b>배경 대비:</b> 단색 벽 배경과 색상이 겹치지 않는 의상 확인</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 4. 1인 세션 타임라인 -->
+    <div class="section-title">
+      <span>4. 표준 18분 세션 타임라인 운영표</span>
+      <span class="desc">지연 없이 리듬감 있게 진행하여 참가자의 자연스러운 상태 유지</span>
+    </div>
+
+    <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:4px; padding:4px 8px; display:flex; justify-content:space-between; align-items:center; font-size:7.2pt;">
+      <div><b>[0~3분]</b> 수속·동의서·복장 점검</div>
+      <div style="color:#cbd5e1;">▶</div>
+      <div><b>[3~5분]</b> 카메라 배터리/포커스 점검</div>
+      <div style="color:#cbd5e1;">▶</div>
+      <div><b>[5~7분]</b> 0번 캘리브레이션</div>
+      <div style="color:#cbd5e1;">▶</div>
+      <div><b>[7~14분]</b> 1~5번 개인성 동작 (순환)</div>
+      <div style="color:#cbd5e1;">▶</div>
+      <div><b>[14~17분]</b> 6·7번 조깅 & 지친 걷기</div>
+      <div style="color:#cbd5e1;">▶</div>
+      <div><b>[17~18분]</b> 데이터 백업 확인</div>
+    </div>
+  </div>
+
+  <div class="footer-note">
+    <span>쌤쌤(SsamSsam) 데이터 엔지니어링팀 | 현장 운영 매뉴얼</span>
+    <span>Page 1 of 2</span>
+  </div>
+</div>
+
+<!-- ================= PAGE 2 ================= -->
+<div class="page">
+  <div>
+    <!-- Header Mini -->
+    <div style="border-bottom: 2px solid #1e3a8a; padding-bottom: 3px; margin-bottom: 5px; display:flex; justify-content:space-between; align-items:flex-end;">
+      <div>
+        <span style="font-size: 11pt; font-weight: 800; color: #0f172a;">동작별 촬영 디렉팅 큐시트 & 발화 스크립트</span>
+        <span style="font-size: 7.2pt; color: #64748b; margin-left: 6px;">(총 8종 동작 / 캘리브레이션 1종 + 개인성 7종)</span>
+      </div>
+      <div style="font-size: 6.8pt; color: #1e40af; font-weight: 700;">
+        규칙: 0번 맨 처음 고정 ➔ 1~5번 순서 순환 ➔ 6, 7번 맨 마지막 고정
+      </div>
+    </div>
+
+    <!-- Script Table -->
+    <table class="script-table">
+      <thead>
+        <tr>
+          <th style="width: 5%;">#</th>
+          <th style="width: 14%;">동작명 / 규격</th>
+          <th style="width: 12%;">촬영 회차</th>
+          <th style="width: 47%;">현장 디렉팅 큐 및 표준 발화 스크립트</th>
+          <th style="width: 22%;">추출 신호 및 체크 포인트</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- 0. 캘리브레이션 -->
+        <tr style="background-color: #f0fdf4;">
+          <td style="text-align: center;"><span class="badge-id" style="background-color:#15803d;">0</span></td>
+          <td><b>캘리브레이션</b><br><span class="badge-meta">T포즈 + 차렷</span></td>
+          <td style="text-align: center;"><b>1회</b><br>(시연 허용)</td>
+          <td>
+            <span class="script-speech">"발을 어깨너비로 벌리고 양팔을 옆으로 나란히 뻗어 5초간 유지해주세요. (5초 후) 이제 팔을 자연스럽게 내리고 정면을 보며 10초간 가만히 서 계시면 됩니다."</span>
+            <span style="color:#15803d; font-size:6.8pt; display:block;">★ 유일하게 촬영자 시연 및 자세 교정 코칭이 허용되는 절차입니다.</span>
+          </td>
+          <td>
+            <b>골격 치수(Bones) 등록</b><br>
+            호흡·미세 흔들림 베이스라인<br>
+            ※ 흔들림 없이 정지 상태 유지
+          </td>
+        </tr>
+
+        <!-- 1. 자연 걷기 -->
+        <tr>
+          <td style="text-align: center;"><span class="badge-id">1</span></td>
+          <td><b>자연 걷기</b><br><span class="badge-meta">직선 6m 왕복</span></td>
+          <td style="text-align: center;">4회 촬영<br><b style="color:#ef4444;">1회차 버림</b><br>뒤 3회 채택</td>
+          <td>
+            <span class="script-speech">"출발선에 서 계시다가, 신호가 떨어지면 평소 길을 걷듯이 편안하게 저쪽 반환점까지 걸어갔다 돌아오세요."</span>
+            <span class="script-dont">✕ 금지 지시: "팔을 힘차게 흔드세요", "모델처럼 당당하게 걸으세요"</span>
+          </td>
+          <td>
+            <b>골반 회전, 보폭, 팔 스윙</b><br>
+            턴 동작 시 회전 반경<br>
+            의식하지 않는 평소 걸음걸이
+          </td>
+        </tr>
+
+        <!-- 2. 손 뻗기 -->
+        <tr>
+          <td style="text-align: center;"><span class="badge-id">2</span></td>
+          <td><b>손 뻗기</b><br><span class="badge-meta">타겟 터치 3회</span></td>
+          <td style="text-align: center;">4회 촬영<br><b style="color:#ef4444;">1회차 버림</b><br>뒤 3회 채택</td>
+          <td>
+            <span class="script-speech">"벽에 붙어 있는 점 스티커를 향해 편한 손으로 손을 뻗어 가볍게 터치하고 제자리로 돌아오는 동작을 3번 반복해주세요."</span>
+            <span class="script-dont">✕ 금지 지시: "최대한 빠르게 뻗으세요", "허리를 꼿꼿이 세우고 뻗으세요"</span>
+          </td>
+          <td>
+            <b>저크(Jerk) 가감속 신호</b><br>
+            어깨-척추 연동 궤적<br>
+            도달 직전 미세 떨림 패턴
+          </td>
+        </tr>
+
+        <!-- 3. 설명하며 말하기 -->
+        <tr>
+          <td style="text-align: center;"><span class="badge-id">3</span></td>
+          <td><b>설명하며 말하기</b><br><span class="badge-meta">20초 스피치</span></td>
+          <td style="text-align: center;">4회 촬영<br><b style="color:#ef4444;">1회차 버림</b><br>뒤 3회 채택</td>
+          <td>
+            <span class="script-speech">"최근에 재미있게 보신 영화나 주말 취미에 대해 편하게 설명해주세요. 손짓이나 제스처는 편하신 대로 쓰시면 됩니다."</span>
+            <span class="script-dont">✕ 금지 지시: "손짓을 많이 써주세요", "발표하듯 정자세로 말하세요"</span>
+          </td>
+          <td>
+            <b>무의식적 상체 제스처</b><br>
+            감정 잔상, 말할 때 체중 이동<br>
+            고개 각도 및 어깨 비대칭
+          </td>
+        </tr>
+
+        <!-- 4. 앉았다 일어서기 -->
+        <tr>
+          <td style="text-align: center;"><span class="badge-id">4</span></td>
+          <td><b>앉았다 일어서기</b><br><span class="badge-meta">의자 3회 반복</span></td>
+          <td style="text-align: center;">4회 촬영<br><b style="color:#ef4444;">1회차 버림</b><br>뒤 3회 채택</td>
+          <td>
+            <span class="script-speech">"의자 앞에 서 계시다가, 평소 앉듯이 편안하게 앉으신 뒤 바로 일어나기를 3번 연속으로 해주세요."</span>
+            <span class="script-dont">✕ 금지 지시: "스쿼트 하듯 무릎 90도를 맞추세요", "손을 앞으로 뻗으세요"</span>
+          </td>
+          <td>
+            <b>질량 중심(CoM) 이동 궤적</b><br>
+            무릎-골반-상체 기립 타이밍<br>
+            앉기 직전 감속 프로파일
+          </td>
+        </tr>
+
+        <!-- 5. 제자리 뛰기 -->
+        <tr>
+          <td style="text-align: center;"><span class="badge-id">5</span></td>
+          <td><b>제자리 뛰기</b><br><span class="badge-meta">10초 바운스</span></td>
+          <td style="text-align: center;">4회 촬영<br><b style="color:#ef4444;">1회차 버림</b><br>뒤 3회 채택</td>
+          <td>
+            <span class="script-speech">"신호에 맞춰 제자리에서 가볍게 콩콩 뛰어주세요. 10초간 지속하시면 됩니다."</span>
+            <span class="script-dont">✕ 금지 지시: "무릎을 가슴까지 높이 드세요", "발끝으로만 착지하세요"</span>
+          </td>
+          <td>
+            <b>관절 간 위상차(Phase Lag)</b><br>
+            착지 시 발목-무릎 충격 흡수<br>
+            상하 리듬 템포
+          </td>
+        </tr>
+
+        <!-- 6. 조깅 -->
+        <tr style="background-color: #fefce8;">
+          <td style="text-align: center;"><span class="badge-id" style="background-color:#ca8a04;">6</span></td>
+          <td><b>조깅 (달리기)</b><br><span class="badge-meta">직선 6m 왕복</span></td>
+          <td style="text-align: center;"><b>3세트</b><br>(전량 채택)</td>
+          <td>
+            <span class="script-speech">"출발선에서 저쪽 반환점까지 가볍게 조깅하듯 뛰어갔다 돌아오세요. 총 3번 진행합니다."</span>
+            <span class="script-dont">※ 피로도 누적을 방지하기 위해 3회만 촬영하며, 버리는 테이크 없이 전량 사용합니다.</span>
+          </td>
+          <td>
+            <b>고강도 보행 지문</b><br>
+            러닝 케이던스 및 착지 궤적<br>
+            반환점 급감속 패턴
+          </td>
+        </tr>
+
+        <!-- 7. 지친 걷기 -->
+        <tr style="background-color: #fef2f2;">
+          <td style="text-align: center;"><span class="badge-id" style="background-color:#dc2626;">7</span></td>
+          <td><b>지친 걷기</b><br><span class="badge-meta">조깅 직후 즉시</span></td>
+          <td style="text-align: center;"><b>3세트</b><br>(전량 채택)</td>
+          <td>
+            <span class="script-speech">"조깅 직후 쉬지 마시고, 숨을 고르면서 천천히 편안하게 한 번 더 걸어갔다 오세요."</span>
+            <span class="script-dont">★ 핵심: 조깅 직후 휴식 시간 없이 즉시 연결하여 피로 상태의 보행을 기록합니다.</span>
+          </td>
+          <td>
+            <b>컨디션 변화(노이즈) 신호</b><br>
+            피로 시 보폭 축소·상체 흔들림<br>
+            지문 복원 모델의 강건성 검증
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- 5. 파일 네이밍 룰 & 데이터 무결성 QA -->
+    <div class="section-title">
+      <span>5. 데이터 관리 & 파일 네이밍 룰 & QA 판정 기준</span>
+      <span class="desc">오탈자 0%를 위한 표준 파일명 및 테이크 불합격 판정 기준</span>
+    </div>
+
+    <div class="grid-2col">
+      <!-- 파일 네이밍 룰 -->
+      <div class="box-card">
+        <div class="box-card-title"><span>표준 파일 네이밍 체계</span><span style="color:#2563eb;">엄격 준수</span></div>
+        <div style="background:#0f172a; color:#38bdf8; font-family:monospace; padding:3px 6px; border-radius:3px; font-size:6.8pt; margin-bottom:3px;">
+          [참가자ID]_[동작코드]_[카메라]_[테이크번호].mp4<br>
+          예시: P003_A01_Walk_CAM-F_T02.mp4
+        </div>
+        <table style="width:100%; border-collapse:collapse; font-size:6.8pt;">
+          <tr><td style="padding:1px 0; font-weight:700;">A00: Calib</td><td style="padding:1px 0;">A01: Walk</td><td style="padding:1px 0;">A02: Reach</td><td style="padding:1px 0;">A03: Talk</td></tr>
+          <tr><td style="padding:1px 0; font-weight:700;">A04: SitStand</td><td style="padding:1px 0;">A05: Jump</td><td style="padding:1px 0;">A06: Jog</td><td style="padding:1px 0;">A07: TiredWalk</td></tr>
+        </table>
+        <div style="font-size:6.7pt; color:#64748b; margin-top:2px;">
+          ※ 테이크 번호: T01(버림), T02(채택1), T03(채택2), T04(채택3)
+        </div>
+      </div>
+
+      <!-- 테이크 불합격 판정 기준 -->
+      <div class="box-card">
+        <div class="box-card-title"><span>NG 테이크 판정 및 즉시 재촬영 기준</span><span style="color:#ef4444;">현장 QA</span></div>
+        <ul class="chk-list">
+          <li class="warn"><b>프레임 아웃:</b> 머리 끝이나 발끝이 화면 밖으로 잘린 경우</li>
+          <li class="warn"><b>오토포커스 헌팅:</b> 카메라 초점이 피사체를 놓치고 흐려진 경우</li>
+          <li class="warn"><b>카메라 진동:</b> 발구름 등으로 삼각대 흔들림 발생 시</li>
+          <li class="warn"><b>싱크 클랩 누락:</b> 테이크 시작 박수가 녹음되지 않은 경우</li>
+          <li><b>타인 침범:</b> 스태프나 타 참가자가 프레임/배경에 들어온 경우</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 6. 세션 종료 후 체크리스트 -->
+    <div style="background:#f1f5f9; border:1px solid #cbd5e1; border-radius:4px; padding:4px 8px; margin-top:4px;">
+      <div style="font-size:7.2pt; font-weight:700; color:#1e293b; margin-bottom:2px;">
+        세션 종료 후 3단계 체크: ① SD카드 ➔ 외장 SSD 즉시 이중 백업 | ② 실명-ID 대응표 잠금 보관 | ③ 메타데이터 누락 확인
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-note">
+    <span>쌤쌤(SsamSsam) 데이터 엔지니어링팀 | 현장 운영 매뉴얼</span>
+    <span>Page 2 of 2</span>
+  </div>
+</div>
+
+</body>
+</html>
