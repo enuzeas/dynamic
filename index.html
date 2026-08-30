@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>쌤쌤 — 지금까지 온 길과 다음 갈 길</title>
+<title>쌤쌤 — 2차 중간발표</title>
 <meta name="description" content="3조 쌤쌤 프로젝트 진행 리포트 — 실험 기록·판단 근거·데이터를 한눈에">
 <style>
   :root{
@@ -102,11 +102,11 @@
 
 <header class="hero">
   <div class="hero-in">
-    <div class="eyebrow">3조 · 진행 리포트</div>
+    <div class="eyebrow">3조 · 2차 중간발표</div>
     <h1>쌤쌤 — 몸짓 복사기
-      <span class="sub">"움직임으로 사람을 알아볼 수 있나?"를 실험으로 확인했고, 그 배움 위에서 주제를 정했습니다. 그리고 지금은 <strong>움직임 스타일이 실제로 캐릭터에 옮겨지는 것까지</strong> 왔습니다.</span>
+      <span class="sub">"움직임으로 사람을 알아볼 수 있나?"를 실험으로 확인했고, 그 배움 위에서 주제를 정했습니다. Motion Puzzle 원저자 자문을 거쳐 <strong>검증 스코프를 확정</strong>했고, 지금은 <strong>15명 데이터 수집을 마쳤습니다</strong>.</span>
     </h1>
-    <div class="hero-meta">2026-07-29 갱신 · 전문 용어 없이 · 읽는 데 5분</div>
+    <div class="hero-meta">2026-08-23 갱신 · 전문 용어 없이 · 읽는 데 5분</div>
   </div>
 </header>
 
@@ -295,28 +295,74 @@
 </section>
 
 <section>
-  <div class="kicker">10 · 다음 갈 길</div>
-  <h2>남은 것</h2>
-  <div class="tblwrap">
-    <table>
-      <thead><tr><th>순서</th><th>할 일</th><th>담당</th></tr></thead>
-      <tbody>
-        <tr><td><span class="star">★</span></td><td><strong>촬영</strong> — 한 사람이 여러 동작(걷기·뛰기·손짓·감정). 카메라 고정, 붙는 옷, <strong>서로 확실히 달라 보이는 동작</strong>을 의도적으로 고른다(06번에서 배운 것)</td><td>전원</td></tr>
-        <tr><td>2</td><td>우리가 찍은 영상을 파이프라인 다섯 칸에 통과시켜 캐릭터까지 재현</td><td>박세준</td></tr>
-        <tr><td>3</td><td>발 미끄러짐 보정 효과를 눈이 아니라 <strong>숫자로</strong> 재기</td><td>박세준</td></tr>
-        <tr><td>4</td><td>"진짜 그 사람 느낌인가" 판정 — 1차 실험의 움직임 비교 도구를 심판으로 재사용</td><td>분담</td></tr>
-        <tr><td>5</td><td>발표용 데모 영상 촬영·편집 + 최종 발표 자료</td><td>분담</td></tr>
-      </tbody>
-    </table>
+  <div class="kicker">10 · 원저자 자문</div>
+  <h2>Motion Puzzle 이성희 교수님께 직접 물었습니다</h2>
+  <p>지금 쓰는 핵심 모델 Motion Puzzle을 만든 이성희 교수님(KAIST CT)께 자문을 받았습니다. <span class="dim">(2026-08-05, 회의록: External_doc/20260805_이성희교수_회의록.md)</span></p>
+  <div class="grid2">
+    <div class="wall"><h4>🧱 스타일 ≠ 습관</h4><p style="margin:6px 0 0">스타일은 <strong>한 동작 안</strong>의 질감, 습관은 <strong>여러 동작을 넘나드는</strong> 그 사람다움. Motion Puzzle 같은 저레벨 생성 모델로는 습관까지 잡아내기 어렵다는 지적을 받았습니다.</p></div>
+    <div class="wall" style="border-color:rgba(61,215,184,.35)"><h4 style="color:var(--accent)">✓ 검증 방법은 통과</h4><p style="margin:6px 0 0">동일인/타인 구별 + LOMO(동작 하나 빼고 재식별)는 "개인 고유성 검증엔 적절한 방법"이라고 확인받았습니다.</p></div>
   </div>
   <div class="box accent">
-    <div class="label">★ 지금 병목은 기술이 아니라 촬영</div>
-    <p style="margin:6px 0 0">공개 데이터로는 전 구간이 이미 돌아갑니다. 그래서 남은 위험은 "될까?"가 아니라 <strong>"우리 영상이 이 관을 잘 통과할까?"</strong>입니다 — 촬영 조건(고정 카메라·붙는 옷·구분되는 동작)이 결과 품질을 그대로 결정합니다.</p>
+    <div class="label">그래서 스코프를 좁혔습니다</div>
+    <p style="margin:6px 0 0">원래 노리던 "여러 동작을 넘나드는 개인 불변 성분(습관) 추출"은 재검토 대상으로 남기고, 지금은 <strong>한 동작 안에서의 개인차 검증</strong>에 집중합니다. 담당 대학원생이 배정돼 정기 협업도 시작했습니다.</p>
   </div>
 </section>
 
 <section>
-  <div class="kicker">11 · 정직한 선긋기</div>
+  <div class="kicker">11 · 우리 기여 지점</div>
+  <h2>Motion Puzzle 원저자도 안 해본 검증</h2>
+  <div class="finding">
+    <div class="num">1</div>
+    <h3>정량 평가 공백 충족</h3>
+    <p>Motion Puzzle 공식 저장소 Todo엔 <strong>"Quantitative evaluation"</strong>이 그대로 남아있습니다 — 원 논문은 비포/애프터 비교 같은 정성적 결과만 보여줬습니다. 저희는 <strong>ICC(반복 촬영 일관성)·DTW(재현 신뢰도)·LOMO(동작 제외 재식별)</strong> 3종 지표로 이 공백을 채웁니다.</p>
+  </div>
+  <div class="finding">
+    <div class="num">2</div>
+    <h3>Encoder_sty 신원 판별력 최초 검증</h3>
+    <p>스타일 인코더(Encoder_sty)는 콘텐츠/스타일을 분리하려고 설계됐을 뿐, <strong>"이걸로 사람을 구별할 수 있는가"</strong>는 원저자도 검증한 적이 없습니다. 저희가 15명 캘리브레이션+재촬영(S2) 데이터로 그 검증을 진행 중입니다.</p>
+  </div>
+</section>
+
+<section>
+  <div class="kicker">12 · 데이터 수집 현황</div>
+  <h2>15명 목표 · 15명 촬영 완료</h2>
+  <div class="stats">
+    <div class="stat"><div class="v good">15<span style="font-size:18px">/15</span></div><div class="k">원본 촬영 완료 인원<br>(목표 15명, 2026-08-22 확정 · 목표 달성)</div></div>
+    <div class="stat"><div class="v">8</div><div class="k">1인당 동작 수<br>(캘리브레이션 + 개인성 동작 7종)</div></div>
+    <div class="stat"><div class="v">5</div><div class="k">재촬영(S2) 목표 인원<br>(항상성 검증용, 대상자 미정)</div></div>
+  </div>
+  <p>15명 원본 촬영을 마쳤고, 지금은 촬영본에서 동작 구간을 나누는 작업 중입니다. <strong>모션 에너지(프레임 간 변화량) 기반으로 구간 후보를 자동 추출</strong>하는 도구를 만들어 7명분 후보 구간까지 뽑았고, 나머지 인원분과 실제 라벨링을 이어서 진행하고 있습니다.</p>
+  <div class="pipe">
+    <span class="node have">촬영 완료 15/15</span><span class="arr">→</span>
+    <span class="node new">동작 구간 라벨링</span><span class="arr">→</span>
+    <span class="node new">Encoder_sty 임베딩 추출</span><span class="arr">→</span>
+    <span class="node new">ICC·DTW·LOMO 검증</span>
+  </div>
+</section>
+
+<section>
+  <div class="kicker">13 · 다음 갈 길</div>
+  <h2>남은 것</h2>
+  <div class="tblwrap">
+    <table>
+      <thead><tr><th>순서</th><th>할 일</th></tr></thead>
+      <tbody>
+        <tr><td><span class="star">★</span></td><td><strong>재촬영(S2) 대상 5명 선정·진행</strong> — 원본 촬영 15명 완료</td></tr>
+        <tr><td>2</td><td>동작 구간 라벨링 완료 (모션 에너지 후보 → 실제 동작 이름 확정)</td></tr>
+        <tr><td>3</td><td>Encoder_sty로 임베딩 추출, ICC·DTW·LOMO 실제 배선</td></tr>
+        <tr><td>4</td><td>발 미끄러짐 보정 효과를 눈이 아니라 <strong>숫자로</strong> 재기</td></tr>
+        <tr><td>5</td><td>발표용 데모 영상 촬영·편집 + 최종 발표 자료</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="box warn">
+    <div class="label">한계</div>
+    <p style="margin:6px 0 0">여러 동작을 넘나드는 "습관" 추출은 여전히 별도 문제로 남아있습니다 — 지금 스코프는 <strong>한 동작 안의 개인차</strong>로 한정돼 있고, 스타일 전이 품질 평가 자체의 주관성도 리스크입니다.</p>
+  </div>
+</section>
+
+<section>
+  <div class="kicker">14 · 정직한 선긋기</div>
   <h2>약속하는 것 / 아직 약속 안 하는 것</h2>
   <div class="grid2">
     <div class="box accent" style="margin:0"><div class="label">약속</div><p style="margin:6px 0 0">전체적인 <strong>리듬·보폭·무게중심</strong> 같은 큰 움직임 느낌이 캐릭터에 옮겨지는 것.</p></div>
@@ -326,7 +372,7 @@
 
 <footer>
   더 보기: <a href="samsam_viewer.html">캐릭터 데모</a> · <a href="reports/viewer.html#motion_value_assessment">판단 근거</a> · <a href="reports/viewer.html#youtube_dance_analysis">실험 기록 6건</a> · <a href="reports/viewer.html">기술 문서 전체</a> · <a href="report.html">1차 실험 리포트(움직임 식별)</a><br><br>
-  3조 쌤쌤 프로젝트 · 진행 리포트 · 2026-07-29 갱신
+  3조 쌤쌤 프로젝트 · 진행 리포트 · 2026-08-23 갱신
 </footer>
 
 </body>

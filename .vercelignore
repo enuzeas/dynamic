@@ -18,6 +18,10 @@ __pycache__
 *.pdf
 *.pptx
 .DS_Store
+.env
+data/raw/
+data/consent/
+data/metadata/segment_review/
 
 # 배포 제외 페이지
 # mvp.html: report.html의 절대경로 복제본

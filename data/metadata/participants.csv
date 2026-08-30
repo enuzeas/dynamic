@@ -1,1 +1,16 @@
-participant_id,session,date,location,order_pattern,height_cm,top_type,bottom_type,shoe_type,camera_model_f,camera_model_d,fps,lighting,condition_note,consent_commercial,calibration_ok,discarded_takes
+participant_id,session,date,location,order_pattern,height_cm,weight_kg,top_type,bottom_type,shoe_type,camera_model_f,camera_model_d,fps,lighting,condition_note,consent_commercial,calibration_ok,discarded_takes
+P001,S1,2026-08-22,대전,A,,,반팔티,반바지,단화,Sony FX3,,60,상시조명,,,,
+P002,S1,2026-08-22,대전,A,,,반팔티,반바지,러닝화,Sony FX3,,60,상시조명,,,,
+P003,S1,2026-08-22,대전,A,,,반팔티,긴바지,구두,Sony FX3,,60,상시조명,,,,
+P004,S1,2026-08-22,대전,A,168,,반팔티,긴바지,구두,Sony FX3,,60,상시조명,,,,
+P005,S1,2026-08-22,대전,A,174,,반팔티,긴바지,단화,Sony FX3,,60,상시조명,,,,
+P006,S1,2026-08-22,대전,A,178,74,반팔티,긴바지,운동화,Sony FX3,,60,상시조명,,,,
+P007,S1,2026-08-22,대전,A,,,반팔티,긴바지,운동화,Sony FX3,,60,상시조명,,,,
+P008,S1,2026-08-22,대전,A,173,,,,단화,Lumix G9ii,,60,상시조명,,,,
+P009,S1,2026-08-22,대전,A,176,,,,단화,Lumix G9ii,,60,상시조명,,,,
+P010,S1,2026-08-22,대전,A,172,,,,단화,Lumix G9ii,,60,상시조명,,,,
+P011,S1,2026-08-22,대전,A,150,,,,단화,Lumix G9ii,,60,상시조명,,,,
+P012,S1,2026-08-22,대전,A,,,,,단화,Lumix G9ii,,60,상시조명,,,,
+P013,S1,2026-08-22,대전,A,165,68,,,단화,Lumix G9ii,,60,상시조명,,,,
+P014,S1,2026-08-22,대전,A,173,70,,,단화,Lumix G9ii,,60,상시조명,,,,
+P015,S1,2026-08-22,대전,A,,,,,단화,Lumix G9ii,,60,상시조명,,,,
