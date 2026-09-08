@@ -13,11 +13,24 @@
   .panel h2 { font-size: 0.85rem; text-align: center; margin: 0 0 5px; color: #b8c6e0; font-weight: 600; }
   .panel .tag { display: block; font-size: 0.72rem; color: #6a7a99; font-weight: 400; margin-top: 1px; }
   .panel canvas { display: block; width: 100%; aspect-ratio: 3 / 4; border-radius: 8px; background: #0d111a; }
+  .bar { display: flex; gap: 10px; align-items: center; justify-content: center; padding: 0 12px 10px; flex-wrap: wrap; }
+  .upbtn { display: inline-block; background: #182236; border: 1px solid #2c3a56; color: #b8c6e0; border-radius: 7px; padding: 8px 12px; font-size: 0.82rem; cursor: pointer; }
+  .upbtn:hover { border-color: #3dd7b8; color: #e8ecf5; }
+  .status { font-size: 0.78rem; color: #9aa9c4; min-height: 1.1em; }
+  .status.err { color: #ff8a8a; }
+  button.upbtn { font-family: inherit; }
+  .upbtn.recording { background: #5c1f24; border-color: #ff8a8a; color: #ffdada; }
 </style>
 </head>
 <body>
 <h1>쌤쌤 — 같은 콘텐츠 동작, 사람마다 다른 스타일</h1>
 <p class="sub">Motion Puzzle 스타일 전이 출력을 Mixamo 캐릭터에 리타겟(2026-07-26) · 드래그로 카메라 회전</p>
+<div class="bar">
+  <label class="upbtn" for="modelUpload">🧍 캐릭터 모델 교체 (.fbx)<input id="modelUpload" type="file" accept=".fbx" hidden></label>
+  <button class="upbtn" id="saveImgBtn" type="button">📷 이미지 저장</button>
+  <button class="upbtn" id="saveVidBtn" type="button">🔴 영상 저장 시작</button>
+  <span class="status" id="modelStatus">기본 캐릭터: X Bot</span>
+</div>
 <div class="row" id="panels">
   <div class="panel"><h2>원본 콘텐츠<span class="tag">스타일 전이 전 (127_21)</span></h2></div>
   <div class="panel"><h2>스타일 A<span class="tag">142_21 스타일 주입</span></h2></div>
@@ -104,6 +117,9 @@ function buildRetargetClip(bvhClip, kmByBone, hipCfg) {
 function computeRig(targetSkinned, srcSkeleton) {
   const bones = {};
   targetSkinned.skeleton.bones.forEach((b) => { bones[b.name] = b; });
+  if (!bones['mixamorigHips']) {
+    throw new Error('본 이름이 mixamorig 형식과 안 맞습니다(mixamorigHips 없음) — 이 캐릭터로는 리타겟할 수 없어요');
+  }
   targetSkinned.skeleton.bones[0].updateWorldMatrix(true, true);
   const srcBones = {};
   srcSkeleton.bones.forEach((b) => { srcBones[b.name] = b; });
@@ -172,7 +188,7 @@ function setupCharacterPanel(panelEl, xbotTemplate, rig, bvhResult) {
   scene.add(character);
 
   const camera = new THREE.PerspectiveCamera(42, 3 / 4, 0.01, 100);
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); // 화면 저장 시 canvas를 읽어야 해서 필요
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(360, 480, false);
   panelEl.appendChild(renderer.domElement);
@@ -193,7 +209,7 @@ function setupCharacterPanel(panelEl, xbotTemplate, rig, bvhResult) {
   const clip = buildRetargetClip(bvhResult.clip, rig.kmByBone, rig.hipCfg);
   const mixer = new THREE.AnimationMixer(character);
   mixer.clipAction(clip).play();
-  mixer.update(masterClock.getElapsedTime()); // 패널 간 시각 동기화
+  mixer.update(0); // t=0 포즈로 시작 — 카메라 프레이밍이 T포즈 박스 기준이라 어긋나면 캐릭터가 화면 밖으로 밀린다
   allMixers.push(mixer);
 
   // 캐릭터가 전진(~6.8m)하므로 카메라가 힙 수평 이동을 따라간다(점프는 프레임 안에서 보임).
@@ -212,20 +228,153 @@ function setupCharacterPanel(panelEl, xbotTemplate, rig, bvhResult) {
     controls.update();
     renderer.render(scene, camera);
   });
+  return renderer;
+}
+
+// 업로드된 FBX는 path=''로 파싱해 외부 텍스처(.fbm 등)를 못 불러온다 — 못 불러온 맵이 검게
+// 렌더돼 캐릭터가 안 보이는 것보다, 텍스처 없이 기본 색으로라도 보이는 쪽이 낫다.
+function stripUnresolvableTextures(obj) {
+  obj.traverse((o) => {
+    if (!o.isMesh) return;
+    for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+      if (m.map) { m.map = null; m.needsUpdate = true; }
+    }
+  });
+}
+
+const panels = document.querySelectorAll('#panels .panel');
+let loadedBvhResults = null;
+let currentRenderers = [];
+
+// 캐릭터 모델을 바꿀 때마다 이전 렌더러·믹서를 정리하고 같은 rig 계산으로 3패널을 다시 세운다.
+function buildAllPanels(template) {
+  template.updateMatrixWorld(true);
+  const rig = computeRig(template.getObjectByProperty('type', 'SkinnedMesh'), loadedBvhResults[0].skeleton); // 본 이름이 안 맞으면 여기서 던짐 — 기존 패널을 건드리기 전에 검증
+
+  currentRenderers.forEach((r) => r.dispose());
+  currentRenderers = [];
+  allMixers.length = 0;
+  allRenderFns.length = 0;
+  panels.forEach((p) => p.querySelectorAll('canvas').forEach((c) => c.remove()));
+
+  SOURCES.forEach((s, i) => {
+    currentRenderers.push(setupCharacterPanel(panels[i], template, rig, loadedBvhResults[i]));
+  });
 }
 
 Promise.all([
   new Promise((res) => new FBXLoader().load('viewer_data/xbot.fbx', res)),
   ...SOURCES.map((s) => new Promise((res) => new BVHLoader().load(s.file, res))),
 ]).then(([xbot, ...bvhResults]) => {
-  xbot.updateMatrixWorld(true);
-  const templateSkinned = xbot.getObjectByProperty('type', 'SkinnedMesh');
-  // rig는 rest만 쓰므로 한 번 계산해 3패널 공유(모두 같은 CMU 골격·같은 X Bot rest).
-  const rig = computeRig(templateSkinned, bvhResults[0].skeleton);
-
-  const panels = document.querySelectorAll('#panels .panel');
-  SOURCES.forEach((s, i) => setupCharacterPanel(panels[i], xbot, rig, bvhResults[i]));
+  loadedBvhResults = bvhResults;
+  buildAllPanels(xbot);
 });
+
+let currentModelLabel = 'X_Bot'; // 저장 파일명에 어떤 캐릭터였는지 남기는 용도
+const modelStatus = document.getElementById('modelStatus');
+document.getElementById('modelUpload').onchange = async (e) => {
+  const file = e.target.files[0];
+  if (!file || !loadedBvhResults) return;
+  modelStatus.textContent = `불러오는 중… ${file.name}`;
+  modelStatus.className = 'status';
+  try {
+    const buf = await file.arrayBuffer();
+    const obj = new FBXLoader().parse(buf, '');
+    if (!obj.getObjectByProperty('type', 'SkinnedMesh')) throw new Error('스킨 메시(SkinnedMesh)가 없는 파일입니다');
+    stripUnresolvableTextures(obj);
+    buildAllPanels(obj);
+    currentModelLabel = file.name.replace(/\.fbx$/i, '');
+    modelStatus.textContent = `"${file.name}" 적용됨`;
+  } catch (err) {
+    modelStatus.textContent = '오류: ' + err.message;
+    modelStatus.className = 'status err';
+  } finally {
+    e.target.value = '';
+  }
+};
+
+// 화면 저장(이미지/영상): 현재 패널들의 canvas를 라벨과 함께 오프스크린 캔버스에 합성해 내려받는다.
+function getPanelLabel(panelEl) {
+  const h2 = panelEl.querySelector('h2');
+  const title = h2.childNodes[0].textContent.trim();
+  const tag = h2.querySelector('.tag')?.textContent.trim() || '';
+  return tag ? `${title} — ${tag}` : title;
+}
+
+function buildComposite() {
+  const panelEls = Array.from(document.querySelectorAll('#panels .panel'));
+  const canvases = panelEls.map((p) => p.querySelector('canvas'));
+  if (!canvases.some(Boolean)) return null;
+  const gap = 16, labelH = 28;
+  const w = canvases.reduce((s, c) => s + (c ? c.width : 0), 0) + gap * (canvases.length - 1);
+  const h = Math.max(...canvases.filter(Boolean).map((c) => c.height)) + labelH;
+  const cvs = document.createElement('canvas');
+  cvs.width = w; cvs.height = h;
+  const ctx = cvs.getContext('2d');
+  function draw() {
+    ctx.fillStyle = '#0b0e14';
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = '#d4deee';
+    ctx.font = '600 16px -apple-system, sans-serif';
+    ctx.textBaseline = 'top';
+    let x = 0;
+    panelEls.forEach((p, i) => {
+      const c = canvases[i];
+      if (!c) return;
+      ctx.fillText(getPanelLabel(p), x, 2);
+      ctx.drawImage(c, x, labelH);
+      x += c.width + gap;
+    });
+  }
+  return { canvas: cvs, draw };
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+// 파일명에 못 쓰는 문자만 제거 — 한글은 그대로 두고 공백만 밑줄로.
+function slugFilename(s) {
+  return s.replace(/[\\/:*?"<>|]/g, '').trim().replace(/\s+/g, '_');
+}
+
+function saveFilename(ext) {
+  return `samsam_${slugFilename(currentModelLabel)}_${Date.now()}.${ext}`;
+}
+
+document.getElementById('saveImgBtn').onclick = () => {
+  const comp = buildComposite();
+  if (!comp) return;
+  comp.draw();
+  comp.canvas.toBlob((blob) => { if (blob) downloadBlob(blob, saveFilename('png')); }, 'image/png');
+};
+
+let recorder = null, recordRAF = null;
+document.getElementById('saveVidBtn').onclick = (e) => {
+  const btn = e.currentTarget;
+  if (recorder && recorder.state === 'recording') { recorder.stop(); return; }
+  const comp = buildComposite();
+  if (!comp) return;
+  const stream = comp.canvas.captureStream(30);
+  const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm';
+  recorder = new MediaRecorder(stream, { mimeType });
+  const chunks = [];
+  recorder.ondataavailable = (ev) => { if (ev.data.size) chunks.push(ev.data); };
+  recorder.onstop = () => {
+    cancelAnimationFrame(recordRAF);
+    downloadBlob(new Blob(chunks, { type: mimeType }), saveFilename('webm'));
+    btn.textContent = '🔴 영상 저장 시작';
+    btn.classList.remove('recording');
+  };
+  (function loop() { comp.draw(); recordRAF = requestAnimationFrame(loop); })();
+  recorder.start();
+  btn.textContent = '⏹ 저장 중지';
+  btn.classList.add('recording');
+};
 
 function animate() {
   requestAnimationFrame(animate);

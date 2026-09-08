@@ -25,6 +25,8 @@
   .panel .tag { display: block; font-size: 0.72rem; color: #6a7a99; font-weight: 400; }
   .panel canvas { display: block; width: 100%; aspect-ratio: 3 / 4; border-radius: 8px; background: #0d111a; }
   .panel.result h2 { color: #3dd7b8; }
+  button.upbtn { font-family: inherit; font-weight: 400; }
+  .upbtn.recording { background: #5c1f24; border-color: #ff8a8a; color: #ffdada; }
 </style>
 </head>
 <body>
@@ -35,6 +37,11 @@
   <div class="ctl"><label for="style">레퍼런스 스타일 (어떤 결로)</label><select id="style"></select></div>
   <button id="run">스타일 전이 실행</button>
   <div class="ctl"><label>커스텀 BVH</label><label class="upbtn" for="upload">＋ 업로드<input id="upload" type="file" accept=".bvh" hidden></label></div>
+  <div class="ctl"><label>캐릭터 모델</label><label class="upbtn" for="modelUpload">🧍 교체 (.fbx)<input id="modelUpload" type="file" accept=".fbx" hidden></label></div>
+  <div class="ctl"><label>화면 저장</label><div style="display:flex; gap:6px;">
+    <button class="upbtn" id="saveImgBtn" type="button">📷 이미지</button>
+    <button class="upbtn" id="saveVidBtn" type="button">🔴 영상 시작</button>
+  </div></div>
   <div class="status" id="status"></div>
 </div>
 <p class="note">영상 → 모션(BVH) 변환은 GVHMR(Colab GPU) 단계입니다. 여기선 그 결과·레퍼런스 BVH(CMU 형식, `retarget_smpl_to_cmu.py` 출력)를 입력으로 씁니다.</p>
@@ -110,6 +117,9 @@ function buildRetargetClip(bvhClip, kmByBone, hipCfg) {
 function computeRig(targetSkinned, srcSkeleton) {
   const bones = {};
   targetSkinned.skeleton.bones.forEach((b) => { bones[b.name] = b; });
+  if (!bones['mixamorigHips']) {
+    throw new Error('본 이름이 mixamorig 형식과 안 맞습니다(mixamorigHips 없음) — 이 캐릭터로는 리타겟할 수 없어요');
+  }
   targetSkinned.skeleton.bones[0].updateWorldMatrix(true, true);
   const srcBones = {};
   srcSkeleton.bones.forEach((b) => { srcBones[b.name] = b; });
@@ -156,6 +166,17 @@ function computeRig(targetSkinned, srcSkeleton) {
 const masterClock = new THREE.Clock();
 const bvhLoader = new BVHLoader();
 
+// 업로드된 FBX는 path=''로 파싱해 외부 텍스처(.fbm 등)를 못 불러온다 — 못 불러온 맵이 검게
+// 렌더돼 캐릭터가 안 보이는 것보다, 텍스처 없이 기본 색으로라도 보이는 쪽이 낫다.
+function stripUnresolvableTextures(obj) {
+  obj.traverse((o) => {
+    if (!o.isMesh) return;
+    for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+      if (m.map) { m.map = null; m.needsUpdate = true; }
+    }
+  });
+}
+
 // 패널 하나 = 씬+캐릭터+카메라. setMotion(bvhUrl)로 언제든 다른 모션을 로드해 갈아끼운다.
 function makePanel(panelEl, xbotTemplate, rig) {
   const character = cloneSkinned(xbotTemplate);
@@ -170,7 +191,7 @@ function makePanel(panelEl, xbotTemplate, rig) {
   scene.add(character);
 
   const camera = new THREE.PerspectiveCamera(42, 3 / 4, 0.01, 100);
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); // 화면 저장 시 canvas를 읽어야 해서 필요
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(340, 453, false);
   panelEl.querySelector('h2').after(renderer.domElement);
@@ -208,7 +229,7 @@ function makePanel(panelEl, xbotTemplate, rig) {
       }, undefined, reject);
     });
   }
-  return { mixer, render, setMotion };
+  return { mixer, render, setMotion, renderer };
 }
 
 const panelEls = document.querySelectorAll('#panels .panel');
@@ -217,6 +238,33 @@ const styleSel = document.getElementById('style');
 const runBtn = document.getElementById('run');
 const statusEl = document.getElementById('status');
 let panels = null;
+let srcSkeleton = null; // rig 재계산용 (캐릭터 모델 교체 시 재사용)
+let lastResult = null; // { url, tag } — 캐릭터 교체 후 결과 패널 복원용
+let currentModelLabel = 'X_Bot'; // 저장 파일명에 어떤 캐릭터였는지 남기는 용도
+const mixers = [];
+const renderFns = [];
+let panelRenderers = [];
+
+// 캐릭터 모델을 바꿀 때마다 이전 렌더러를 정리하고 같은 rig 계산으로 3패널을 다시 세운다.
+function buildPanels(template) {
+  template.updateMatrixWorld(true);
+  const rig = computeRig(template.getObjectByProperty('type', 'SkinnedMesh'), srcSkeleton); // 본 이름이 안 맞으면 여기서 던짐 — 기존 패널을 건드리기 전에 검증
+
+  panelRenderers.forEach((r) => r.dispose());
+  panelRenderers = [];
+  mixers.length = 0;
+  renderFns.length = 0;
+  panelEls.forEach((p) => p.querySelectorAll('canvas').forEach((c) => c.remove()));
+
+  panels = {
+    content: makePanel(panelEls[0], template, rig),
+    style: makePanel(panelEls[1], template, rig),
+    result: makePanel(panelEls[2], template, rig),
+  };
+  mixers.push(panels.content.mixer, panels.style.mixer, panels.result.mixer);
+  renderFns.push(panels.content.render, panels.style.render, panels.result.render);
+  panelRenderers.push(panels.content.renderer, panels.style.renderer, panels.result.renderer);
+}
 
 function setStatus(msg, isErr) { statusEl.textContent = msg; statusEl.className = 'status' + (isErr ? ' err' : ''); }
 function stem(name) { return name.replace(/\.bvh$/, ''); }
@@ -226,7 +274,6 @@ Promise.all([
   fetch('/api/sources').then((r) => r.json()),
 ]).then(([xbot, { sources, uploads = [] }]) => {
   xbot.updateMatrixWorld(true);
-  const templateSkinned = xbot.getObjectByProperty('type', 'SkinnedMesh');
   if (!sources.length) { setStatus('입력 BVH가 없습니다 (external/motion_puzzle/datasets/cmu/test_bvh 확인)', true); return; }
   // 데모용 큐레이션 — CMU 공식 설명(una-dinosauria/cmu-mocap 인덱스)에서 명확·상이한 동작만
   // 골라 한국어 라벨. 나머지 270개는 "전체(CMU ID)" 그룹에 그대로 둔다.
@@ -271,16 +318,10 @@ Promise.all([
   contentSel.value = urlByName['07_11.bvh'] || contentSel.options[0].value;
   styleSel.value = urlByName['55_07.bvh'] || styleSel.options[0].value;
 
-  // rig는 아무 소스 BVH의 rest로 한 번만 계산(전부 같은 CMU 골격).
+  // rig는 아무 소스 BVH의 rest로 한 번만 계산(전부 같은 CMU 골격). 캐릭터 모델 교체 시 재사용.
   bvhLoader.load(sources[0].url, (res0) => {
-    const rig = computeRig(templateSkinned, res0.skeleton);
-    panels = {
-      content: makePanel(panelEls[0], xbot, rig),
-      style: makePanel(panelEls[1], xbot, rig),
-      result: makePanel(panelEls[2], xbot, rig),
-    };
-    const renderFns = [panels.content.render, panels.style.render, panels.result.render];
-    const mixers = [panels.content.mixer, panels.style.mixer, panels.result.mixer];
+    srcSkeleton = res0.skeleton;
+    buildPanels(xbot);
     (function animate() {
       requestAnimationFrame(animate);
       const d = masterClock.getDelta();
@@ -288,11 +329,6 @@ Promise.all([
       renderFns.forEach((f) => f());
     })();
 
-    // 콘텐츠/스타일 패널은 선택 즉시 그 모션을 보여준다 (태그는 드롭다운에 표시된 이름 그대로)
-    const loadContent = () => { panels.content.setMotion(contentSel.value); document.getElementById('content-tag').textContent = contentSel.selectedOptions[0].text; };
-    const loadStyle = () => { panels.style.setMotion(styleSel.value); document.getElementById('style-tag').textContent = styleSel.selectedOptions[0].text; };
-    contentSel.onchange = loadContent;
-    styleSel.onchange = loadStyle;
     loadContent(); loadStyle();
     setStatus('준비됨 — 콘텐츠·스타일을 고르고 실행하세요.');
 
@@ -315,8 +351,37 @@ Promise.all([
         e.target.value = '';  // 같은 파일 다시 업로드 가능하게
       }
     };
+
+    // 캐릭터 모델 교체: 새 FBX를 파싱해 3패널을 다시 세우고 현재 모션·결과를 복원한다.
+    document.getElementById('modelUpload').onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      setStatus(`캐릭터 모델 불러오는 중… ${file.name}`);
+      try {
+        const buf = await file.arrayBuffer();
+        const obj = new FBXLoader().parse(buf, '');
+        if (!obj.getObjectByProperty('type', 'SkinnedMesh')) throw new Error('스킨 메시(SkinnedMesh)가 없는 파일입니다');
+        stripUnresolvableTextures(obj);
+        buildPanels(obj);
+        currentModelLabel = file.name.replace(/\.fbx$/i, '');
+        loadContent(); loadStyle();
+        if (lastResult) { await panels.result.setMotion(lastResult.url); document.getElementById('result-tag').textContent = lastResult.tag; }
+        setStatus(`"${file.name}" 캐릭터 적용됨`);
+      } catch (err) {
+        setStatus('오류: ' + err.message, true);
+      } finally {
+        e.target.value = '';
+      }
+    };
   });
 });
+
+// 콘텐츠/스타일 패널은 선택 즉시 그 모션을 보여준다 (태그는 드롭다운에 표시된 이름 그대로).
+// 캐릭터 모델 교체 후에도 재사용하도록 모듈 스코프에 둔다.
+function loadContent() { if (!panels) return; panels.content.setMotion(contentSel.value); document.getElementById('content-tag').textContent = contentSel.selectedOptions[0].text; }
+function loadStyle() { if (!panels) return; panels.style.setMotion(styleSel.value); document.getElementById('style-tag').textContent = styleSel.selectedOptions[0].text; }
+contentSel.onchange = loadContent;
+styleSel.onchange = loadStyle;
 
 runBtn.onclick = async () => {
   if (!panels) return;
@@ -334,13 +399,99 @@ runBtn.onclick = async () => {
     const j = await r.json();
     if (!r.ok) throw new Error(j.error || '실행 실패');
     await panels.result.setMotion(j.url);
-    document.getElementById('result-tag').textContent = `${contentLabel} + ${styleLabel} 스타일`;
+    lastResult = { url: j.url, tag: `${contentLabel} + ${styleLabel} 스타일` };
+    document.getElementById('result-tag').textContent = lastResult.tag;
     setStatus('완료 — 오른쪽 결과 패널을 확인하세요.');
   } catch (e) {
     setStatus('오류: ' + e.message, true);
   } finally {
     runBtn.disabled = false;
   }
+};
+
+// 화면 저장(이미지/영상): 현재 패널들의 canvas를 라벨과 함께 오프스크린 캔버스에 합성해 내려받는다.
+function getPanelLabel(panelEl) {
+  const h2 = panelEl.querySelector('h2');
+  const title = h2.childNodes[0].textContent.trim();
+  const tag = h2.querySelector('.tag')?.textContent.trim() || '';
+  return tag ? `${title} — ${tag}` : title;
+}
+
+function buildComposite() {
+  const els = Array.from(panelEls);
+  const canvases = els.map((p) => p.querySelector('canvas'));
+  if (!canvases.some(Boolean)) return null;
+  const gap = 16, labelH = 28;
+  const w = canvases.reduce((s, c) => s + (c ? c.width : 0), 0) + gap * (canvases.length - 1);
+  const h = Math.max(...canvases.filter(Boolean).map((c) => c.height)) + labelH;
+  const cvs = document.createElement('canvas');
+  cvs.width = w; cvs.height = h;
+  const ctx = cvs.getContext('2d');
+  function draw() {
+    ctx.fillStyle = '#0b0e14';
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = '#d4deee';
+    ctx.font = '600 16px -apple-system, sans-serif';
+    ctx.textBaseline = 'top';
+    let x = 0;
+    els.forEach((p, i) => {
+      const c = canvases[i];
+      if (!c) return;
+      ctx.fillText(getPanelLabel(p), x, 2);
+      ctx.drawImage(c, x, labelH);
+      x += c.width + gap;
+    });
+  }
+  return { canvas: cvs, draw };
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+// 파일명에 못 쓰는 문자만 제거 — 한글은 그대로 두고 공백만 밑줄로.
+function slugFilename(s) {
+  return s.replace(/[\\/:*?"<>|]/g, '').trim().replace(/\s+/g, '_');
+}
+
+function saveFilename(ext) {
+  const content = stem(contentSel.value.split('/').pop());
+  const style = stem(styleSel.value.split('/').pop());
+  return `style_transfer_${slugFilename(currentModelLabel)}_${slugFilename(content)}_${slugFilename(style)}_${Date.now()}.${ext}`;
+}
+
+document.getElementById('saveImgBtn').onclick = () => {
+  const comp = buildComposite();
+  if (!comp) return;
+  comp.draw();
+  comp.canvas.toBlob((blob) => { if (blob) downloadBlob(blob, saveFilename('png')); }, 'image/png');
+};
+
+let recorder = null, recordRAF = null;
+document.getElementById('saveVidBtn').onclick = (e) => {
+  const btn = e.currentTarget;
+  if (recorder && recorder.state === 'recording') { recorder.stop(); return; }
+  const comp = buildComposite();
+  if (!comp) return;
+  const stream = comp.canvas.captureStream(30);
+  const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm';
+  recorder = new MediaRecorder(stream, { mimeType });
+  const chunks = [];
+  recorder.ondataavailable = (ev) => { if (ev.data.size) chunks.push(ev.data); };
+  recorder.onstop = () => {
+    cancelAnimationFrame(recordRAF);
+    downloadBlob(new Blob(chunks, { type: mimeType }), saveFilename('webm'));
+    btn.textContent = '🔴 영상 시작';
+    btn.classList.remove('recording');
+  };
+  (function loop() { comp.draw(); recordRAF = requestAnimationFrame(loop); })();
+  recorder.start();
+  btn.textContent = '⏹ 저장 중지';
+  btn.classList.add('recording');
 };
 </script>
 </body>
