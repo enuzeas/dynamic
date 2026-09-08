@@ -24,3 +24,4 @@ data/raw/
 data/consent/id_mapping.csv
 data/metadata/segment_review/*.png
 data/metadata/segment_review/*_segments.csv
+icc_features*.npz
