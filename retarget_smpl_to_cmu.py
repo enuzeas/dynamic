@@ -36,6 +36,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent / "external" / "motion_puzzle" / "motion"))
+import Animation as AnimationModule  # noqa: E402
 from Animation import Animation  # noqa: E402
 from Quaternions import Quaternions  # noqa: E402
 import BVH  # noqa: E402
@@ -243,11 +244,30 @@ def retarget(smpl_rotvecs: np.ndarray, root_trans: np.ndarray) -> Animation:
     return Animation(rotations, positions, orients, RAW31_OFFSETS, RAW31_PARENTS)
 
 
+FOOT_JOINTS = [RAW31_NAMES.index(n) for n in ("LeftFoot", "LeftToeBase", "RightFoot", "RightToeBase")]
+
+
+def ground(anim: Animation, percentile: float = 0.0) -> Animation:
+    """클립 전체에서 가장 낮은 발 위치가 바닥(y=0)에 오도록 루트 높이를 통째로 옮긴다.
+
+    REST_HIP_Y는 "쉴 때 자세"에서 계산한 값이라 실제 동작 중 발이 그보다 아래로 내려가는 건
+    고려하지 않는다. 2026-09-11 실측에서 발가락이 바닥 아래 0.63~1.19단위(약 6 cm)까지 파고들었다
+    (CMU 참조 127_21.bvh는 0.63 / -0.02).
+
+    기본은 최저값(percentile=0)이라 관통이 정확히 0이 된다. 추정이 한 프레임 튀어서 클립 전체가
+    들리는 경우에만 percentile을 올린다 — 실측(354프레임): 0 → 관통 0.000, 0.2 → -0.040(0.2%),
+    1.0 → -0.496(1.1%). ponytail: 기본값으로 충분하고, 튀는 클립이 나오면 그때 올리는 손잡이.
+    """
+    y = AnimationModule.positions_global(anim)[:, FOOT_JOINTS, 1]
+    anim.positions[:, 0, 1] -= float(np.percentile(y, percentile))
+    return anim
+
+
 def save_bvh(smpl_rotvecs: np.ndarray, root_trans: np.ndarray, out_path: str, fps: float = 60.0,
              keep_height_drift: bool = False) -> None:
     if not keep_height_drift:
         root_trans = detrend_height(root_trans)
-    anim = retarget(smpl_rotvecs, root_trans)
+    anim = ground(retarget(smpl_rotvecs, root_trans))   # 드리프트 제거 후에 접지해야 순서가 맞는다
     BVH.save(out_path, anim, names=RAW31_NAMES, frametime=1.0 / fps)
 
 
