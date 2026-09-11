@@ -88,9 +88,8 @@ SMPL_LEG_M = 0.82
 UNITS_PER_M = (np.linalg.norm(RAW31_OFFSETS[3]) + np.linalg.norm(RAW31_OFFSETS[4])) / SMPL_LEG_M
 
 # GVHMR transl은 절대 높이가 아니라 첫 프레임 기준 상대 변위다(실측: 평균 0.06 m, 음수도 나옴).
-# 그래서 골격이 바닥에 서는 높이를 더해야 한다 = 힙부터 발목까지의 Y 하강분 합.
-# 계산값 15.99는 CMU 참조 41_02.bvh의 루트 Y 최소값 16.00과 일치한다.
-REST_HIP_Y = -float(RAW31_OFFSETS[2:6, 1].sum())
+# 그래서 골격이 바닥에 서는 높이를 더해야 한다. 값은 아래 REST_ALIGN 정의 뒤에서 FK로 계산한다
+# — 쉴 때 자세 보정을 하면 다리가 덜 벌어져 발이 더 내려가므로 오프셋 단순 합으로는 안 맞는다.
 
 # generate_dataset.py의 process_data()가 그대로 쓰는 그 인덱스 배열 — 31개 중 이
 # 21개만 "관심 있는" 관절로 골라낸다. 우리 리타겟 결과가 여기 정확히 꽂혀야 한다.
@@ -109,6 +108,95 @@ SMPL_JOINT_NAMES = [
 CMU_FROM_SMPL = np.array([0, 1, 4, 7, 10, 2, 5, 8, 11, 3, 9, 12, 15, 16, 18, 20, 22, 17, 19, 21, 23])
 
 
+# --- 쉴 때 자세 보정 (2026-09-11 추가) ---------------------------------------
+# 회전만 복사하면 안 되는 이유: CMU 골격은 쉴 때부터 다리를 각각 수직에서 20° 벌리고 어깨를 20°
+# 올린 자세다. SMPL 템플릿은 대퇴가 수직에서 5.2°, 상완이 수평에서 2.8°다. SMPL 회전이 0일 때
+# CMU 골격은 자기 쉴 때 자세로 가므로, 보정 없이는 양다리가 30° 과하게 벌어진 채로 달린다
+# (2026-09-11 실제 산출물에서 눈으로 확인). CMU 원본 모션이 멀쩡한 건 그 데이터가 이 골격용으로
+# 만들어져 회전값에 안쪽으로 접는 보정이 이미 들어 있기 때문이다.
+#
+# 보정: 관절 j가 회전시키는 뼈의 CMU 쉴때 방향을 SMPL 쉴때 방향으로 돌리는 쿼터니언 A_j를 두고
+#   q_cmu_local[j] = A_parent⁻¹ ∘ q_smpl_local[j] ∘ A_j
+# 를 쓴다. 그러면 SMPL 회전이 0일 때 CMU 골격이 SMPL 쉴 때 자세를 재현한다.
+#
+# 아래 값은 SMPL_NEUTRAL.pkl의 템플릿 관절 위치(J)에서 계산한 단위 방향 벡터다. 상수로 구워
+# 넣어서 런타임에는 여전히 SMPL 모델 파일이 필요 없다(라이선스). 유도 방법은
+# doc/samsam/smpl_to_bvh_calibration.md 참고.
+#
+# Neck1(15)은 일부러 뺐다 — SMPL의 head 관절은 목보다 앞쪽에 있고(방향 Z +0.62) CMU Head는
+# 거의 수직 위라 관절 의미가 다르다. 보정하면 머리가 42° 앞으로 숙여진다. 의미가 다른 건
+# 보정이 아니라 왜곡이므로 그대로 둔다.
+SMPL_REST_DIR = {
+     1: ( 0.604302, -0.794550, -0.059242),   # LHipJoint     보정 23.8도
+     2: ( 0.090970, -0.995782, -0.011932),   # LeftUpLeg     보정 14.8도
+     3: (-0.033940, -0.993454, -0.109074),   # LeftLeg       보정 22.8도
+     4: ( 0.196260, -0.415413,  0.888208),   # LeftFoot      보정 16.2도
+     6: (-0.598312, -0.800352, -0.038194),   # RHipJoint     보정 22.9도
+     7: (-0.099563, -0.994765, -0.023012),   # RightUpLeg    보정 14.3도
+     8: ( 0.039339, -0.993638, -0.105525),   # RightLeg      보정 23.0도
+     9: (-0.188191, -0.357099,  0.914912),   # RightFoot     보정 12.5도
+    11: (-0.022572,  0.971026, -0.237904),   # LowerBack     보정  8.6도
+    12: ( 0.036530,  0.989548,  0.139498),   # Spine         보정  9.2도
+    13: (-0.012737,  0.980428, -0.196466),   # Spine1        보정 17.0도
+    17: ( 0.944210,  0.316223, -0.092039),   # LeftShoulder  보정  1.2도
+    18: ( 0.993266, -0.048865, -0.105047),   # LeftArm       보정  6.7도
+    19: ( 0.999340,  0.036031, -0.004695),   # LeftForeArm   보정  2.1도
+    20: ( 0.980084, -0.095178, -0.174290),   # LeftHand      보정 11.5도
+    24: (-0.943224,  0.319782, -0.089821),   # RightShoulder 보정  5.2도
+    25: (-0.995100, -0.052273, -0.083928),   # RightArm      보정  5.7도
+    26: (-0.999300,  0.030423, -0.021760),   # RightForeArm  보정  2.1도
+    27: (-0.990107, -0.071574, -0.120690),   # RightHand     보정  8.1도
+}
+
+
+def _cmu_bone_dir(j: int) -> np.ndarray:
+    """관절 j가 회전시키는 뼈의 CMU 쉴때 방향(단위벡터). 자식 오프셋이 0이면 그 아래로 누적."""
+    kids = [k for k, p in enumerate(RAW31_PARENTS) if p == j]
+    for k in kids:
+        v, cur = RAW31_OFFSETS[k].copy(), k
+        while np.allclose(v, 0):
+            nxt = [m for m, p in enumerate(RAW31_PARENTS) if p == cur]
+            if not nxt:
+                break
+            cur = nxt[0]
+            v = v + RAW31_OFFSETS[cur]
+        if not np.allclose(v, 0):
+            return v / np.linalg.norm(v)
+    return None
+
+
+def _rest_align() -> Quaternions:
+    """관절별 A_j (31개). 보정 대상이 아니면 항등."""
+    A = Quaternions.id(len(RAW31_NAMES))
+    for j, smpl_dir in SMPL_REST_DIR.items():
+        cmu_dir = _cmu_bone_dir(j)
+        if cmu_dir is None:
+            continue
+        A.qs[j] = Quaternions.between(cmu_dir[None, :], np.array([smpl_dir]))[0].qs[0]
+    return A
+
+
+REST_ALIGN = _rest_align()
+
+
+def _rest_hip_height() -> float:
+    """보정된 쉴 때 자세(=SMPL 쉴 때 자세)에서 가장 낮은 관절이 바닥(y=0)에 닿는 힙 높이."""
+    q = Quaternions.id(len(RAW31_NAMES))
+    q = (-Quaternions(np.concatenate([Quaternions.id(1).qs, REST_ALIGN.qs[RAW31_PARENTS[1:]]]))) * q * REST_ALIGN
+    gq, gp = [], []
+    for j, parent in enumerate(RAW31_PARENTS):
+        if parent < 0:
+            gq.append(q[j:j + 1]); gp.append(np.zeros(3))
+        else:
+            gq.append(gq[parent] * q[j:j + 1])
+            gp.append(gp[parent] + (gq[parent] * RAW31_OFFSETS[j][None, :])[0])
+    return -float(min(p[1] for p in gp))
+
+
+# 보정 후 실측 16.4 (보정 전 오프셋 합 15.99). CMU 참조 41_02.bvh의 루트 Y 최소 16.00과 같은 자릿수.
+REST_HIP_Y = _rest_hip_height()
+
+
 def retarget(smpl_rotvecs: np.ndarray, root_trans: np.ndarray) -> Animation:
     """smpl_rotvecs: (F, 24, 3) 축각. root_trans: (F, 3) **미터**. 31관절 Animation을 반환."""
     n_frames = smpl_rotvecs.shape[0]
@@ -119,7 +207,13 @@ def retarget(smpl_rotvecs: np.ndarray, root_trans: np.ndarray) -> Animation:
     mapped_quats = smpl_quats[:, CMU_FROM_SMPL]  # (F, 21)
 
     rotations = Quaternions.id((n_frames, n_joints))
-    rotations.qs[:, SELECTED_31_TO_21] = mapped_quats.qs  # 나머지 10개는 항등 회전 유지(오프셋 0이라 무해)
+    rotations.qs[:, SELECTED_31_TO_21] = mapped_quats.qs  # 나머지 10개는 SMPL 회전 없음(항등)
+
+    # 쉴 때 자세 보정: q_cmu_local[j] = A_parent⁻¹ ∘ q_smpl_local[j] ∘ A_j
+    # 보정 대상이 아닌 관절은 A가 항등이라 이 식이 회전 복사와 같아진다.
+    A = REST_ALIGN
+    A_parent = Quaternions(np.concatenate([Quaternions.id(1).qs, A.qs[RAW31_PARENTS[1:]]]))
+    rotations = (-A_parent)[None] * rotations * A[None]
 
     positions = np.tile(RAW31_OFFSETS[None, :, :], (n_frames, 1, 1))
     positions[:, 0] = root_trans * UNITS_PER_M
