@@ -28,8 +28,8 @@ def make_synthetic_smpl_motion(n_frames: int = 60) -> tuple[np.ndarray, np.ndarr
     t = np.linspace(0, 2 * np.pi, n_frames)
     rotvecs[:, 19, 2] = 0.8 * np.sin(t)  # right_elbow를 z축으로 굽힘
     trans = np.zeros((n_frames, 3))
-    trans[:, 1] = 100.0  # 대략적인 힙 높이
-    trans[:, 2] = np.linspace(0, 20, n_frames)  # 앞으로 약간 걸어나감
+    trans[:, 1] = 0.0  # 미터. GVHMR transl은 상대 변위라 0 근처이고, 바닥 높이는 retarget이 더한다
+    trans[:, 2] = np.linspace(0, 1.2, n_frames)  # 앞으로 1.2 m 걸어나감
     return rotvecs, trans
 
 

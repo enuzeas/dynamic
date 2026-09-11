@@ -34,11 +34,13 @@ import torch
 
 
 def smpl_params_global_to_rotations(smpl_params_global: dict) -> tuple[np.ndarray, np.ndarray]:
-    """global_orient(F,3)+body_pose(F,63) -> rotations(F,24,3) 축각, trans(F,3, CMU-BVH cm 스케일).
+    """global_orient(F,3)+body_pose(F,63) -> rotations(F,24,3) 축각, trans(F,3, 미터).
 
-    GVHMR/FootMR의 transl은 SMPL 관례대로 미터 단위인데, `retarget_smpl_to_cmu.py`가 쓰는
-    CMU BVH 골격(`RAW31_OFFSETS`)은 센티미터 스케일(힙 높이 ~100 단위) — 여기서 ×100 해서
-    맞춘다. 안 하면 캐릭터가 실제 크기의 1/100로 뷰어에 나온다.
+    2026-09-11 정정: 예전엔 여기서 ×100(미터→cm)을 했는데 틀렸다. CMU BVH는 cm가 아니라 자체
+    단위다 — `test_bvh/127_21.bvh`·`41_02.bvh`의 루트 Y가 16~25 범위이고, 이는 `RAW31_OFFSETS`로
+    계산한 쉴 때 엉덩이 높이 15.99와 일치한다. ×100을 하면 캐릭터가 바닥을 뚫고 위아래로 6배
+    과장되게 튄다(실제로 그렇게 나왔다). 단위 변환과 바닥 정렬은 골격을 아는 쪽이 해야 하므로
+    `retarget_smpl_to_cmu.py`로 옮겼다. 여기서는 SMPL 원래 단위인 미터를 그대로 내보낸다.
     """
     global_orient = smpl_params_global["global_orient"].detach().cpu().numpy()
     body_pose = smpl_params_global["body_pose"].detach().cpu().numpy()
@@ -48,7 +50,7 @@ def smpl_params_global_to_rotations(smpl_params_global: dict) -> tuple[np.ndarra
     rotations = np.zeros((n_frames, 24, 3))
     rotations[:, 0] = global_orient
     rotations[:, 1:22] = body_pose.reshape(n_frames, 21, 3)
-    return rotations, transl * 100.0
+    return rotations, transl
 
 
 if __name__ == "__main__":

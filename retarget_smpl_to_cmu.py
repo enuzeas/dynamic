@@ -24,7 +24,7 @@ LThumb·RThumb — 전부 raw 파일에서 OFFSET이 0,0,0이라 기하학적으
 
 사용법 (motion_puzzle conda env에서 실행 — Animation/Quaternions/BVH 모듈 재사용):
   conda run -n motion_puzzle python retarget_smpl_to_cmu.py --npz smpl_pose.npz --out out.bvh
-  (smpl_pose.npz: "rotations" (F,24,3) 축각(axis-angle), "trans" (F,3) 루트 이동, "fps" 스칼라)
+  (smpl_pose.npz: "rotations" (F,24,3) 축각(axis-angle), "trans" (F,3) 루트 이동(미터), "fps" 스칼라)
   그 뒤 그대로 Motion Puzzle --content 입력으로 쓸 수 있다:
   conda run -n motion_puzzle python test.py --content out.bvh --style <style.bvh> --output_dir <dir>
 """
@@ -80,6 +80,18 @@ RAW31_OFFSETS = np.array([
     [-0.622530, 0.000000, 0.000000], [0.000000, 0.000000, 0.000000],
 ])
 
+# 루트 이동(미터) -> CMU 단위 변환. 2026-09-11에 실측으로 잡은 값이다.
+# CMU BVH는 cm가 아니라 자체 단위다: 이 골격의 대퇴 |offs[3]|=7.16 + 경골 |offs[4]|=7.49 = 14.65단위가
+# SMPL 템플릿 다리 길이 약 0.82 m에 해당하므로 미터당 약 17.9단위. 예전엔 ×100(cm)을 써서 캐릭터가
+# 바닥 아래까지 내려가고 상하로 6배 튀었다.
+SMPL_LEG_M = 0.82
+UNITS_PER_M = (np.linalg.norm(RAW31_OFFSETS[3]) + np.linalg.norm(RAW31_OFFSETS[4])) / SMPL_LEG_M
+
+# GVHMR transl은 절대 높이가 아니라 첫 프레임 기준 상대 변위다(실측: 평균 0.06 m, 음수도 나옴).
+# 그래서 골격이 바닥에 서는 높이를 더해야 한다 = 힙부터 발목까지의 Y 하강분 합.
+# 계산값 15.99는 CMU 참조 41_02.bvh의 루트 Y 최소값 16.00과 일치한다.
+REST_HIP_Y = -float(RAW31_OFFSETS[2:6, 1].sum())
+
 # generate_dataset.py의 process_data()가 그대로 쓰는 그 인덱스 배열 — 31개 중 이
 # 21개만 "관심 있는" 관절로 골라낸다. 우리 리타겟 결과가 여기 정확히 꽂혀야 한다.
 SELECTED_31_TO_21 = np.array([0, 2, 3, 4, 5, 7, 8, 9, 10, 12, 13, 15, 16, 18, 19, 20, 22, 25, 26, 27, 29])
@@ -98,7 +110,7 @@ CMU_FROM_SMPL = np.array([0, 1, 4, 7, 10, 2, 5, 8, 11, 3, 9, 12, 15, 16, 18, 20,
 
 
 def retarget(smpl_rotvecs: np.ndarray, root_trans: np.ndarray) -> Animation:
-    """smpl_rotvecs: (F, 24, 3) 축각. root_trans: (F, 3). 31관절 Animation을 반환."""
+    """smpl_rotvecs: (F, 24, 3) 축각. root_trans: (F, 3) **미터**. 31관절 Animation을 반환."""
     n_frames = smpl_rotvecs.shape[0]
     n_joints = len(RAW31_NAMES)
 
@@ -110,7 +122,8 @@ def retarget(smpl_rotvecs: np.ndarray, root_trans: np.ndarray) -> Animation:
     rotations.qs[:, SELECTED_31_TO_21] = mapped_quats.qs  # 나머지 10개는 항등 회전 유지(오프셋 0이라 무해)
 
     positions = np.tile(RAW31_OFFSETS[None, :, :], (n_frames, 1, 1))
-    positions[:, 0] = root_trans
+    positions[:, 0] = root_trans * UNITS_PER_M
+    positions[:, 0, 1] += REST_HIP_Y
 
     orients = Quaternions.id(n_joints)
     return Animation(rotations, positions, orients, RAW31_OFFSETS, RAW31_PARENTS)

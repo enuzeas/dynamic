@@ -49,7 +49,7 @@ def main() -> None:
     check_conversion(rotations, trans, n_frames)
 
     out_path = "/tmp/hmr4d_to_npz_test_out.bvh"
-    save_bvh(rotations, trans, out_path, fps=60.0)  # trans는 smpl_params_global_to_rotations가 이미 cm로 변환함
+    save_bvh(rotations, trans, out_path, fps=60.0)  # trans는 미터 — 단위 변환·바닥 정렬은 save_bvh 쪽이 한다
     print(f"합성 hmr4d_results -> BVH 저장: {out_path}")
 
     check_roundtrip(out_path)
