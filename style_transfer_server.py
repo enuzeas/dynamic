@@ -134,6 +134,9 @@ class Handler(SimpleHTTPRequestHandler):
 
 if __name__ == "__main__":
     port = 8940
-    print(f"쌤쌤 스타일 전이 UI → http://localhost:{port}  (Ctrl+C로 종료)")
+    # ponytail: 기본은 로컬만. 팀원에게 열 땐 HOST=$(tailscale ip -4) 로 테일넷 IP에만 바인딩
+    # (0.0.0.0은 카페 와이파이에도 열려서 안 씀). 인증은 테일넷 멤버십이 전부.
+    host = os.environ.get("HOST", "127.0.0.1")
+    print(f"쌤쌤 스타일 전이 UI → http://{host}:{port}  (Ctrl+C로 종료)")
     print(f"입력 BVH 풀: {BVH_DIR} ({len(list_bvh(BVH_DIR))}개), 업로드: {len(list_bvh(UPLOAD_DIR))}개")
-    ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()
+    ThreadingHTTPServer((host, port), Handler).serve_forever()

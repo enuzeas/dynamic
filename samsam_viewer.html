@@ -118,7 +118,8 @@ function computeRig(targetSkinned, srcSkeleton) {
   const bones = {};
   targetSkinned.skeleton.bones.forEach((b) => { bones[b.name] = b; });
   if (!bones['mixamorigHips']) {
-    throw new Error('본 이름이 mixamorig 형식과 안 맞습니다(mixamorigHips 없음) — 이 캐릭터로는 리타겟할 수 없어요');
+    const found = Object.keys(bones).slice(0, 5).join(', ') || '(본 없음)';
+    throw new Error(`mixamorigHips 본이 없어 리타겟할 수 없어요. Mixamo에서 "FBX Binary + With Skin"으로 내려받은 파일인지 확인해 주세요. 이 파일의 본: ${found}…`);
   }
   targetSkinned.skeleton.bones[0].updateWorldMatrix(true, true);
   const srcBones = {};
@@ -176,7 +177,6 @@ const allRenderFns = [];
 function setupCharacterPanel(panelEl, xbotTemplate, rig, bvhResult) {
   const character = cloneSkinned(xbotTemplate); // 자체 스켈레톤을 가진 깊은 복제
   character.scale.setScalar(0.01); // cm → m
-  const skinned = character.getObjectByProperty('type', 'SkinnedMesh');
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x0d111a);
@@ -213,7 +213,7 @@ function setupCharacterPanel(panelEl, xbotTemplate, rig, bvhResult) {
   allMixers.push(mixer);
 
   // 캐릭터가 전진(~6.8m)하므로 카메라가 힙 수평 이동을 따라간다(점프는 프레임 안에서 보임).
-  const hipBone = skinned.skeleton.bones.find((b) => b.name === 'mixamorigHips');
+  const hipBone = character.getObjectByName('mixamorigHips'); // 부분 skeleton에는 없을 수 있어 계층에서 찾는다
   const cur = new THREE.Vector3(), prev = new THREE.Vector3();
   let inited = false;
   allRenderFns.push(() => {
@@ -231,16 +231,32 @@ function setupCharacterPanel(panelEl, xbotTemplate, rig, bvhResult) {
   return renderer;
 }
 
-// 업로드된 FBX는 path=''로 파싱해 외부 텍스처(.fbm 등)를 못 불러온다 — 못 불러온 맵이 검게
-// 렌더돼 캐릭터가 안 보이는 것보다, 텍스처 없이 기본 색으로라도 보이는 쪽이 낫다.
-function stripUnresolvableTextures(obj) {
-  obj.traverse((o) => {
-    if (!o.isMesh) return;
-    for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
-      if (m.map) { m.map = null; m.needsUpdate = true; }
-    }
+// Mixamo 캐릭터는 SkinnedMesh가 여러 개(몸·머리카락·신발…)이고, 각 메시의 skeleton.bones에는
+// 그 메시를 스킨하는 본만 들어간다. 첫 메시가 신발이면 그 skeleton엔 Hips가 아예 없다
+// (실제 사례: 본 목록이 LeftLeg부터 시작). ponytail: 본이 가장 많은 메시 = 전체 골격.
+function pickSkinned(root) {
+  let best = null;
+  root.traverse((o) => {
+    if (o.isSkinnedMesh && (!best || o.skeleton.bones.length > best.skeleton.bones.length)) best = o;
   });
+  return best;
 }
+
+// Mixamo는 이미 리깅된 FBX를 다시 올리면 본 접두사에 번호를 붙인다(mixamorig1:Hips…). three의
+// PropertyBinding.sanitizeNodeName이 ':'를 지워 'mixamorig1Hips'가 되고 이름 매칭이 전부 빗나간다.
+// ponytail: 이름만 표준형으로 되돌리면 리타겟 로직은 한 줄도 안 건드린다.
+function normalizeMixamoBoneNames(root) {
+  root.traverse((o) => { o.name = o.name.replace(/^mixamorig[\d_]*:?/i, 'mixamorig'); });
+}
+
+// 업로드된 FBX는 path=''로 파싱해 외부 텍스처(.fbm 등)를 못 불러온다 — 못 불러온 맵이 검게 렌더돼
+// 캐릭터가 안 보인다. 하지만 FBX Binary는 이미지를 파일 안에 담고(FBXLoader가 blob: URL로 넘긴다),
+// 예전 코드는 그 살아 있는 맵까지 전부 버려서 Mixamo 캐릭터가 회색으로 나왔다.
+// ponytail: 외부 URL만 1x1 흰 픽셀로 갈아끼운다 — 로드 실패가 없으니 사후 정리도 필요 없다.
+// (텍스처 로드는 비동기여서 파싱 직후에 성공/실패를 판정하는 방법은 애초에 없다.)
+const WHITE_PX = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4//8/AAX+Av4N70a4AAAAAElFTkSuQmCC';
+const embeddedOnly = new THREE.LoadingManager();
+embeddedOnly.setURLModifier((url) => (/^(blob:|data:)/.test(url) ? url : WHITE_PX));
 
 const panels = document.querySelectorAll('#panels .panel');
 let loadedBvhResults = null;
@@ -248,8 +264,9 @@ let currentRenderers = [];
 
 // 캐릭터 모델을 바꿀 때마다 이전 렌더러·믹서를 정리하고 같은 rig 계산으로 3패널을 다시 세운다.
 function buildAllPanels(template) {
+  normalizeMixamoBoneNames(template);
   template.updateMatrixWorld(true);
-  const rig = computeRig(template.getObjectByProperty('type', 'SkinnedMesh'), loadedBvhResults[0].skeleton); // 본 이름이 안 맞으면 여기서 던짐 — 기존 패널을 건드리기 전에 검증
+  const rig = computeRig(pickSkinned(template), loadedBvhResults[0].skeleton); // 본 이름이 안 맞으면 여기서 던짐 — 기존 패널을 건드리기 전에 검증
 
   currentRenderers.forEach((r) => r.dispose());
   currentRenderers = [];
@@ -279,9 +296,8 @@ document.getElementById('modelUpload').onchange = async (e) => {
   modelStatus.className = 'status';
   try {
     const buf = await file.arrayBuffer();
-    const obj = new FBXLoader().parse(buf, '');
-    if (!obj.getObjectByProperty('type', 'SkinnedMesh')) throw new Error('스킨 메시(SkinnedMesh)가 없는 파일입니다');
-    stripUnresolvableTextures(obj);
+    const obj = new FBXLoader(embeddedOnly).parse(buf, '');
+    if (!pickSkinned(obj)) throw new Error('스킨 메시(SkinnedMesh)가 없는 파일입니다');
     buildAllPanels(obj);
     currentModelLabel = file.name.replace(/\.fbx$/i, '');
     modelStatus.textContent = `"${file.name}" 적용됨`;
