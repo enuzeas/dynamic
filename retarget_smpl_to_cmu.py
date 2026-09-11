@@ -197,6 +197,26 @@ def _rest_hip_height() -> float:
 REST_HIP_Y = _rest_hip_height()
 
 
+def detrend_height(trans: np.ndarray) -> np.ndarray:
+    """루트 높이의 선형 추세를 제거한다(평균 높이는 유지). trans는 (F,3) 미터.
+
+    2026-09-11 실측: `-s`(정적 카메라, SLAM 생략)로 뽑은 GVHMR 출력에서 5.91초 동안 루트가
+    0.17 m 꾸준히 올라갔다 — 수평 1.81 m 이동 대비 실효 경사 5.4도. 촬영 가이드상 바닥은
+    평평하므로(`samsam_shooting_guide.md`) 이 추세는 월드 높이 추정 드리프트다. 추세를 빼도
+    뛰는 상하 진폭(잔차 ±1.3단위)은 그대로 남는다.
+
+    ponytail: 선형 추세만 뺀다. 클립 전체에서 실제로 높이가 변하는 동작(계단, 앉은 채로 끝나는
+    촬영)에는 맞지 않으므로 `--keep-height-drift`로 끌 수 있게 뒀다. 곡률까지 남으면 그때
+    저역통과 필터로 올려도 된다.
+    """
+    y = trans[:, 1]
+    t = np.arange(len(y), dtype=float)
+    slope = np.polyfit(t, y, 1)[0]
+    out = trans.copy()
+    out[:, 1] = y - slope * t
+    return out
+
+
 def retarget(smpl_rotvecs: np.ndarray, root_trans: np.ndarray) -> Animation:
     """smpl_rotvecs: (F, 24, 3) 축각. root_trans: (F, 3) **미터**. 31관절 Animation을 반환."""
     n_frames = smpl_rotvecs.shape[0]
@@ -223,7 +243,10 @@ def retarget(smpl_rotvecs: np.ndarray, root_trans: np.ndarray) -> Animation:
     return Animation(rotations, positions, orients, RAW31_OFFSETS, RAW31_PARENTS)
 
 
-def save_bvh(smpl_rotvecs: np.ndarray, root_trans: np.ndarray, out_path: str, fps: float = 60.0) -> None:
+def save_bvh(smpl_rotvecs: np.ndarray, root_trans: np.ndarray, out_path: str, fps: float = 60.0,
+             keep_height_drift: bool = False) -> None:
+    if not keep_height_drift:
+        root_trans = detrend_height(root_trans)
     anim = retarget(smpl_rotvecs, root_trans)
     BVH.save(out_path, anim, names=RAW31_NAMES, frametime=1.0 / fps)
 
@@ -233,9 +256,12 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--npz", required=True, help='"rotations" (F,24,3), "trans" (F,3), "fps" 저장된 npz')
+    parser.add_argument("--keep-height-drift", action="store_true",
+                        help="루트 높이의 선형 추세를 남긴다(기본은 제거 — 바닥이 평평하다는 전제)")
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
 
     data = np.load(args.npz)
-    save_bvh(data["rotations"], data["trans"], args.out, float(data["fps"]) if "fps" in data else 60.0)
+    save_bvh(data["rotations"], data["trans"], args.out, float(data["fps"]) if "fps" in data else 60.0,
+             keep_height_drift=args.keep_height_drift)
     print(f"저장 완료: {args.out}")
