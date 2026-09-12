@@ -83,9 +83,13 @@ RAW31_OFFSETS = np.array([
 
 # 루트 이동(미터) -> CMU 단위 변환. 2026-09-11에 실측으로 잡은 값이다.
 # CMU BVH는 cm가 아니라 자체 단위다: 이 골격의 대퇴 |offs[3]|=7.16 + 경골 |offs[4]|=7.49 = 14.65단위가
-# SMPL 템플릿 다리 길이 약 0.82 m에 해당하므로 미터당 약 17.9단위. 예전엔 ×100(cm)을 써서 캐릭터가
+# SMPL 템플릿 다리 길이 0.7774 m에 해당하므로 미터당 약 18.8단위. 예전엔 ×100(cm)을 써서 캐릭터가
 # 바닥 아래까지 내려가고 상하로 6배 튀었다.
-SMPL_LEG_M = 0.82
+# SMPL_NEUTRAL.pkl의 템플릿 관절 위치 J로 실측한 값(2026-09-12):
+#   대퇴 |left_knee - left_hip| = 0.3768 m, 경골 |left_ankle - left_knee| = 0.4006 m
+# 처음엔 0.82로 어림잡았는데 4.26 cm 과대였고 배율이 5.5% 어긋났다. 상수로 구워 넣어
+# 런타임에 SMPL 모델 파일이 필요 없게 유지한다(라이선스).
+SMPL_LEG_M = 0.7774
 UNITS_PER_M = (np.linalg.norm(RAW31_OFFSETS[3]) + np.linalg.norm(RAW31_OFFSETS[4])) / SMPL_LEG_M
 
 # GVHMR transl은 절대 높이가 아니라 첫 프레임 기준 상대 변위다(실측: 평균 0.06 m, 음수도 나옴).
