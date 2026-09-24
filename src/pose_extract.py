@@ -55,7 +55,7 @@ def _smooth(arr: np.ndarray) -> np.ndarray:
 def extract_joint_dynamics(
     video_path: str, joints: tuple[str, ...] = tuple(LANDMARK_INDEX)
 ) -> dict[str, dict[str, np.ndarray]]:
-    """영상 → 관절별 {speed, accel, jerk} 시계열."""
+    """영상 → 관절별 {speed, accel, jerk, pos(평활화된 2D 위치)} 시계열."""
     cap = cv2.VideoCapture(video_path)
     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
     w = cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 1.0
@@ -100,7 +100,7 @@ def extract_joint_dynamics(
         speed = _smooth(np.linalg.norm(vel, axis=1))
         accel = np.gradient(speed) * fps
         jerk = np.abs(np.gradient(accel) * fps)
-        dynamics[j] = {"speed": speed, "accel": accel, "jerk": jerk}
+        dynamics[j] = {"speed": speed, "accel": accel, "jerk": jerk, "pos": pos}
     return dynamics
 
 
