@@ -30,3 +30,4 @@ data/metadata/*
 !data/metadata/segment_review/
 data/metadata/segment_review/*
 !data/metadata/segment_review/*.py
+reports/pca_pilot_cache.pkl
