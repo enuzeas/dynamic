@@ -1,0 +1,259 @@
+<title>쌤쌤 스타일 전이 비교</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* 레이아웃: 요약(세 질문의 답) → 참가자 고르기 → 다섯 칸 나란히(원천 조깅 · 두 방법 결과 · 실제 걷기 · 기준 걷기) */
+:root {
+  --bg: #F2F4F3; --surface: #FFFFFF; --fg: #1C2422; --muted: #5B6965; --line: #D3DBD8;
+  --accent: #1E6B58; --accent-soft: #DCEBE5; --left: #2F6CD3; --right: #D2582F; --spine: #4E5A57;
+  --floor: #DDE3E1; --good: #1E7A52; --mid: #A26A12; --bad: #B33B3B;
+  --font-ui: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-num: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141A19; --surface: #1C2423; --fg: #E5ECEA; --muted: #9AA8A4; --line: #2F3A38;
+    --accent: #5EC2A4; --accent-soft: #1F3A33; --left: #6F9EF0; --right: #F08A62; --spine: #B6C2BF;
+    --floor: #2A3533; --good: #5CC08F; --mid: #E0A84A; --bad: #EE7B7B; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141A19; --surface: #1C2423; --fg: #E5ECEA; --muted: #9AA8A4; --line: #2F3A38;
+  --accent: #5EC2A4; --accent-soft: #1F3A33; --left: #6F9EF0; --right: #F08A62; --spine: #B6C2BF;
+  --floor: #2A3533; --good: #5CC08F; --mid: #E0A84A; --bad: #EE7B7B; color-scheme: dark;
+}
+body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); font-size: 0.95rem; line-height: 1.55; }
+.wrap { max-width: 1320px; margin: 0 auto; padding-inline: 16px; padding-block: 24px 48px; display: grid; gap: 20px; }
+h1 { font-size: 1.6rem; font-weight: 600; margin: 0; text-wrap: balance; }
+h2 { font-size: 1.05rem; font-weight: 600; margin: 0; }
+.lede { margin: 0; color: var(--muted); max-width: 72ch; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 14px; min-width: 0; }
+.answers { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.answer { border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: grid; gap: 4px; }
+.answer .q { font-size: 0.78rem; color: var(--muted); letter-spacing: 0.04em; }
+.answer .a { font-weight: 600; }
+.answer .n { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: 0.85rem; color: var(--muted); }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.84rem; }
+th, td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { font-weight: 500; color: var(--muted); }
+td.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.row { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: flex-end; }
+.field { display: grid; gap: 4px; min-width: 0; }
+.field > span { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: transparent; color: var(--fg); border-radius: 999px; padding: 4px 11px; font: inherit; font-family: var(--font-num); font-size: 0.85rem; cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; background: transparent; color: var(--fg); font: inherit; padding: 6px 12px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.stage { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.cell { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px; display: grid; gap: 6px; min-width: 0; align-content: start; }
+.cell h3 { margin: 0; font-size: 0.9rem; font-weight: 600; }
+.cell .sub { font-size: 0.76rem; color: var(--muted); margin-top: -4px; }
+.cell.src { border-color: var(--accent); }
+canvas { width: 100%; aspect-ratio: 3 / 4; max-width: 100%; display: block; border-radius: 6px; background: var(--bg); }
+.m { display: grid; grid-template-columns: 1fr auto 3.8em; gap: 1px 6px; font-size: 0.8rem; align-items: center; }
+.m .v, .m .d { font-family: var(--font-num); font-variant-numeric: tabular-nums; text-align: right; }
+.m .l { color: var(--muted); }
+.notes { font-size: 0.82rem; color: var(--muted); display: grid; gap: 6px; max-width: 92ch; }
+.notes p { margin: 0; }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:6px">
+    <h1>쌤쌤 스타일 전이 비교</h1>
+    <p class="lede">참가자의 움직임 특징을 CMU 데이터의 기본 걷기에 두 가지 방법으로 입혀 봤습니다. 특징을 다른 동작(조깅)에서 뽑았을 때와 같은 동작(걷기)에서 뽑았을 때, 결과가 그 사람의 실제 걷기와 얼마나 닮는지 나란히 비교합니다.</p>
+  </header>
+
+  <section class="panel" aria-label="요약">
+    <div class="row" style="justify-content:space-between">
+      <h2>네 가지 질문</h2>
+      <div class="field"><span>스타일을 뽑은 동작</span><div class="seg" id="modeSeg">
+        <button type="button" id="modeJog" data-m="jog" aria-pressed="true">조깅 (다른 동작)</button>
+        <button type="button" id="modeWalk" data-m="walk" aria-pressed="false">걷기 (같은 동작)</button>
+      </div></div>
+    </div>
+    <div class="answers" id="answers"></div>
+    <div class="tablewrap"><table id="evalTable"></table></div>
+  </section>
+
+  <section class="panel" aria-label="보기">
+    <div class="row">
+      <div class="field"><span>참가자</span><div class="chips" id="people"></div></div>
+    </div>
+    <div class="row">
+      <div class="field"><span>보는 각도</span><div class="seg" id="viewSeg">
+        <button type="button" id="v0" data-v="0" aria-pressed="false">정면</button>
+        <button type="button" id="v45" data-v="40" aria-pressed="true">사선</button>
+        <button type="button" id="v90" data-v="90" aria-pressed="false">측면</button>
+      </div></div>
+      <div class="field"><span>재생</span><div class="seg">
+        <button type="button" id="playBtn" aria-pressed="true">일시정지</button>
+        <button type="button" id="speedBtn" aria-pressed="false">0.5배속</button>
+      </div></div>
+    </div>
+    <div class="stage" id="stage"></div>
+  </section>
+
+  <section class="notes">
+    <p><b>관절 AdaIN.</b> 상체·고개 기울기, 위팔·허벅지의 앞뒤/옆 각도, 팔꿈치·무릎 굽힘 등 16개 관절 각도 채널마다 기준 걷기의 평균과 흔들림 폭을 지우고, 참가자의 평균과 흔들림 폭을 입힙니다. 옆 방향 채널은 평균만 옮깁니다 — 참가자가 카메라 앞을 가로질러 걸어서 몸의 옆 방향이 카메라 깊이 방향이 되고, 그 깊이 추정 노이즈까지 흔들림으로 옮겨 붙기 때문입니다. 학습된 특징 대신 사람이 읽는 각도에 AdaIN을 직접 쓴 것이라 무엇이 바뀌었는지 그대로 보입니다. 표의 "AdaIN상대"는 참가자의 절대값 대신 12명 평균과의 차이만 옮긴 판입니다.</p>
+    <p><b>Aberman 2020.</b> "영상에서 애니메이션으로" 스타일을 옮기는 모델로, 같은 CMU 골격을 쓰고 스타일을 3D 동작이나 영상의 2D 관절로 받습니다. 배우가 연기한 8가지 감정 걸음(화남·노인·우울 등)으로 학습해서, 우리 참가자의 미묘한 차이를 그 감정 스타일 중 하나 쪽으로 크게 바꿔 버립니다. 스타일로 기준 걷기 자신을 넣어도 상체가 14° 숙여지는 등 원본을 다시 만들지 못했습니다.</p>
+    <p><b>두 방법.</b> 모션퍼즐(Motion Puzzle)은 동작을 학습된 잠재 공간으로 보내 콘텐츠(걷기)와 스타일(조깅)을 섞는 딥러닝 모델입니다. 각도 오프셋은 참가자의 조깅이 12명 평균보다 팔꿈치를 몇 도 더 펴는지, 팔을 얼마나 더 벌리는지 같은 차이를 걷기에 그대로 더하고, 팔 흔들림 폭은 비율만큼 키웁니다. 학습이 없어서 무엇을 바꿨는지 정확히 압니다.</p>
+    <p><b>숫자 읽는 법.</b> 팔꿈치·무릎은 관절 각도(180°면 쭉 폄), 팔 벌림은 몸통선과 위팔 사이 각, 상체 숙임은 앞으로 기운 각, 팔·허벅지 흔들림은 앞뒤로 흔드는 각도 범위입니다. 결과 칸의 오른쪽 숫자는 기준 걷기(CMU 35_06)에서 달라진 양입니다. 위 표의 r은 12명 사이 상관으로, 1에 가까울수록 사람 간 순서가 그대로 옮겨졌다는 뜻입니다.</p>
+    <p><b>걷기에서 뽑은 경우.</b> 걷기를 두 번 이상 찍은 10명만 해당합니다. 첫 테이크로 스타일을 뽑고, 결과를 스타일 뽑을 때 쓰지 않은 두 번째 테이크와 비교합니다. 같은 사람이 같은 동작을 두 번 했을 때의 일치도가 넘기 어려운 상한입니다.</p>
+    <p><b>한계.</b> 참가자 3D는 스마트폰 정면 영상을 MediaPipe로 추정한 값이라 GVHMR보다 거칠고, 걷기는 화면을 가로질러 걸어서 옆모습이 많습니다. 결과는 모두 CMU 배우의 골격에 얹었으므로 키와 팔다리 비율 같은 체형은 빠져 있습니다. 참가자 12명이 2D 분석과 같은 날, 같은 옷으로 찍은 데이터입니다.</p>
+  </section>
+</div>
+
+<script>
+const DATA = /*__DATA__*/null;
+const K = Object.fromEntries(DATA.keys.map((k, i) => [k, i]));
+const BONES = {
+  left: [["Lhip", "Lknee"], ["Lknee", "Lank"], ["Lank", "Ltoe"], ["Lsh", "Lel"], ["Lel", "Lwr"], ["neck", "Lsh"], ["pelvis", "Lhip"]],
+  right: [["Rhip", "Rknee"], ["Rknee", "Rank"], ["Rank", "Rtoe"], ["Rsh", "Rel"], ["Rel", "Rwr"], ["neck", "Rsh"], ["pelvis", "Rhip"]],
+  spine: [["pelvis", "neck"], ["neck", "head"]],
+};
+const CELLS_BY_MODE = {
+  jog: [
+    { key: "jog", title: "원천 · 조깅", sub: "참가자 실제 조깅 (스타일을 뽑는 곳)", src: true },
+    { key: "puzzle", title: "모션퍼즐 → 걷기", sub: "학습된 잠재 공간으로 전이 (2022)" },
+    { key: "aberman3d", title: "Aberman 3D → 걷기", sub: "3D 동작을 스타일로 (2020)" },
+    { key: "aberman2d", title: "Aberman 2D → 걷기", sub: "영상의 2D 관절을 그대로 스타일로 (2020)" },
+    { key: "adain", title: "관절 AdaIN → 걷기", sub: "관절 각도 16채널의 평균·흔들림을 바꿔 끼움" },
+    { key: "offset", title: "각도 오프셋 → 걷기", sub: "6가지 습관만 평균 대비 차이를 더함" },
+    { key: "walk", title: "실제 걷기", sub: "같은 참가자가 실제로 걸은 모습" },
+    { key: "content", title: "기준 걷기", sub: "CMU 35_06, 스타일 입히기 전" },
+  ],
+  walk: [
+    { key: "jog", title: "원천 · 걷기 T01", sub: "참가자 걷기 첫 테이크 (스타일을 뽑는 곳)", src: true },
+    { key: "puzzle", title: "모션퍼즐 → 걷기", sub: "학습된 잠재 공간으로 전이 (2022)" },
+    { key: "aberman3d", title: "Aberman 3D → 걷기", sub: "3D 동작을 스타일로 (2020)" },
+    { key: "aberman2d", title: "Aberman 2D → 걷기", sub: "영상의 2D 관절을 그대로 스타일로 (2020)" },
+    { key: "adain", title: "관절 AdaIN → 걷기", sub: "관절 각도 16채널의 평균·흔들림을 바꿔 끼움" },
+    { key: "offset", title: "각도 오프셋 → 걷기", sub: "6가지 습관만 평균 대비 차이를 더함" },
+    { key: "walk", title: "실제 걷기 T02", sub: "스타일 뽑을 때 안 쓴 테이크 (정답)" },
+    { key: "content", title: "기준 걷기", sub: "CMU 35_06, 스타일 입히기 전" },
+  ],
+};
+const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const state = { mode: "jog", person: Object.keys(DATA.people)[0], view: 40, playing: !reduce, speed: 1 };
+const PEOPLE_OF = () => state.mode === "jog" ? DATA.people : DATA.same.people;
+const fmt = v => v.toFixed(0) + "°";
+
+function css(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+
+function summary() {
+  const E = DATA.eval, M = DATA.metrics;
+  const avg = key => M.reduce((s, m) => s + E[key][m], 0) / M.length;
+  const pct = k => Math.round(E["식별 " + k] * 100) + "%";
+  const chance = Math.round(100 / Object.keys(DATA.people).length) + "%";
+  const ans = [
+    { q: "① 조깅 특징이 결과 걷기로 옮겨졌나", a: "AdaIN·오프셋·모션퍼즐은 옮겨짐, Aberman은 못 옮김", n: `사람 간 상관 평균 AdaIN ${avg("AdaIN: 조깅→결과").toFixed(2)} · 오프셋 ${avg("오프셋: 조깅→결과").toFixed(2)} · 모션퍼즐 ${avg("모션퍼즐: 조깅→결과").toFixed(2)} · Aberman 3D ${avg("Aberman3D: 조깅→결과").toFixed(2)} · 2D ${avg("Aberman2D: 조깅→결과").toFixed(2)}` },
+    { q: "② 결과가 그 사람의 실제 걷기를 닮았나", a: "거의 닮지 않음", n: `상관 평균 AdaIN ${avg("AdaIN: 결과↔실제걷기").toFixed(2)} · 오프셋 ${avg("오프셋: 결과↔실제걷기").toFixed(2)} · 모션퍼즐 ${avg("모션퍼즐: 결과↔실제걷기").toFixed(2)} · 원래 조깅↔걷기 ${avg("자연: 조깅↔실제걷기").toFixed(2)}` },
+    { q: "③ 결과만 보고 누구 것인지 맞힐 수 있나", a: "원천 조깅으로는 맞힘, 실제 걷기로는 못 맞힘", n: `원천 조깅으로 AdaIN ${pct("AdaIN 결과→원천조깅")} · 오프셋 ${pct("오프셋 결과→원천조깅")} · 모션퍼즐 ${pct("모션퍼즐 결과→원천조깅")} / 실제 걷기로 ${pct("오프셋 결과→실제걷기")} · ${pct("모션퍼즐 결과→실제걷기")} (우연 ${chance})` },
+  ];
+  const S2 = DATA.same.eval, nS = Object.keys(DATA.same.people).length;
+  const avgS = key => M.reduce((s, m) => s + S2[key][m], 0) / M.length;
+  ans.push({ q: "④ 같은 동작(걷기)에서 특징을 뽑으면", a: "AdaIN·오프셋이 실제 걷기를 거의 그대로 재현, 모션퍼즐이 다음", n: `안 쓴 걷기 테이크와 상관 평균 AdaIN ${avgS("AdaIN 결과↔T02").toFixed(2)} · 오프셋 ${avgS("오프셋 결과↔T02").toFixed(2)} · 모션퍼즐 ${avgS("모션퍼즐 결과↔T02").toFixed(2)} · Aberman 3D ${avgS("Aberman3D 결과↔T02").toFixed(2)} · 2D ${avgS("Aberman2D 결과↔T02").toFixed(2)} (같은 사람 두 테이크끼리 ${avgS("상한: 걷기T01↔T02").toFixed(2)}) · 식별 AdaIN ${Math.round(S2["식별 AdaIN 결과→T02"] * 100)}% · 오프셋 ${Math.round(S2["식별 오프셋 결과→T02"] * 100)}% · 모션퍼즐 ${Math.round(S2["식별 모션퍼즐 결과→T02"] * 100)}% · Aberman ${Math.round(S2["식별 Aberman3D 결과→T02"] * 100)}%/${Math.round(S2["식별 Aberman2D 결과→T02"] * 100)}% (우연 ${Math.round(100 / nS)}%)` });
+  document.getElementById("answers").innerHTML = ans.map(x => `<div class="answer"><div class="q">${x.q}</div><div class="a">${x.a}</div><div class="n">${x.n}</div></div>`).join("");
+  if (state.mode === "walk") {
+    const rowsW = [["같은 사람 걷기 T01 ↔ T02 (상한)", "상한: 걷기T01↔T02"], ...["AdaIN", "AdaIN상대", "오프셋", "모션퍼즐", "Aberman3D", "Aberman2D"].map(n => [`${n} 결과 ↔ 걷기 T02`, `${n} 결과↔T02`])];
+    const colW = r => r >= 0.7 ? "var(--good)" : r >= 0.4 ? "var(--mid)" : "var(--bad)";
+    document.getElementById("evalTable").innerHTML =
+      `<thead><tr><th>${nS}명 사이 상관 r · 걷기에서 뽑은 경우</th>${M.map(m => `<th>${m}</th>`).join("")}</tr></thead><tbody>` +
+      rowsW.map(([lab, key]) => `<tr><td>${lab}</td>${M.map(m => `<td class="num" style="color:${colW(S2[key][m])}">${S2[key][m] >= 0 ? "+" : ""}${S2[key][m].toFixed(2)}</td>`).join("")}</tr>`).join("") + "</tbody>";
+    return;
+  }
+  const rows = [
+    ["원래: 실제 조깅 ↔ 실제 걷기", "자연: 조깅↔실제걷기"],
+    ...["AdaIN", "AdaIN상대", "오프셋", "모션퍼즐", "Aberman3D", "Aberman2D"].flatMap(n => [[`${n}: 조깅 → 결과`, `${n}: 조깅→결과`], [`${n}: 결과 ↔ 실제 걷기`, `${n}: 결과↔실제걷기`]]),
+  ];
+  const col = r => r >= 0.7 ? "var(--good)" : r >= 0.4 ? "var(--mid)" : "var(--bad)";
+  const spread = [["사람 간 퍼짐: 실제 걷기", "실제 걷기 퍼짐"], ...["AdaIN", "AdaIN상대", "오프셋", "모션퍼즐", "Aberman3D", "Aberman2D"].map(n => [`사람 간 퍼짐: ${n} 결과`, `${n} 결과 퍼짐`])];
+  document.getElementById("evalTable").innerHTML =
+    `<thead><tr><th>12명 사이 상관 r</th>${M.map(m => `<th>${m}</th>`).join("")}</tr></thead><tbody>` +
+    rows.map(([lab, key]) => `<tr><td>${lab}</td>${M.map(m => `<td class="num" style="color:${col(E[key][m])}">${E[key][m] >= 0 ? "+" : ""}${E[key][m].toFixed(2)}</td>`).join("")}</tr>`).join("") +
+    spread.map(([lab, key]) => `<tr><td>${lab}</td>${M.map(m => `<td class="num">${E[key][m].toFixed(1)}°</td>`).join("")}</tr>`).join("") + "</tbody>";
+}
+
+const stage = document.getElementById("stage");
+let cells = [];
+function buildPeople() {
+  const box = document.getElementById("people"); box.innerHTML = "";
+  if (!PEOPLE_OF()[state.person]) state.person = Object.keys(PEOPLE_OF())[0];
+  for (const p of Object.keys(PEOPLE_OF())) {
+    const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.id = "p-" + p; b.textContent = p;
+    b.setAttribute("aria-pressed", String(p === state.person));
+    b.onclick = () => { state.person = p; buildPeople(); build(); };
+    box.appendChild(b);
+  }
+}
+
+function groupMean(kind, m) { const ps = Object.values(PEOPLE_OF()); return ps.reduce((s, P) => s + P.m[kind][m], 0) / ps.length; }
+
+function build() {
+  stage.innerHTML = ""; cells = [];
+  const P = PEOPLE_OF()[state.person];
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  for (const c of CELLS_BY_MODE[state.mode]) {
+    const clip = c.key === "content" ? DATA.content : P.clips[c.key];
+    const m = c.key === "content" ? DATA.base : P.m[c.key];
+    const el = document.createElement("article"); el.className = "cell" + (c.src ? " src" : "");
+    const ref = (c.key === "jog" || c.key === "walk") ? (k => groupMean(c.key, k)) : (k => DATA.base[k]);
+    const refLabel = (c.key === "jog" || c.key === "walk") ? "12명 평균 대비" : (c.key === "content" ? "" : "기준 걷기 대비");
+    const rows = DATA.metrics.map(k => {
+      const d = m[k] - ref(k);
+      const show = c.key !== "content";
+      const tint = Math.min(1, Math.abs(d) / 15);
+      const colr = d >= 0 ? css("--right") : css("--left");
+      return `<span class="l">${k}</span><span class="v">${fmt(m[k])}</span><span class="d" style="${show ? `background: color-mix(in srgb, ${colr} ${Math.round(tint * 30)}%, transparent)` : ""}">${show ? (d >= 0 ? "+" : "") + d.toFixed(0) + "°" : ""}</span>`;
+    }).join("");
+    el.innerHTML = `<h3>${c.title}</h3><div class="sub">${c.sub}${refLabel ? " · 오른쪽 숫자: " + refLabel : ""}</div><canvas width="${280 * dpr}" height="${373 * dpr}" aria-label="${c.title}"></canvas><div class="m">${rows}</div>`;
+    stage.appendChild(el);
+    cells.push({ clip, canvas: el.querySelector("canvas") });
+  }
+}
+
+function draw(t) {
+  const th = state.view * Math.PI / 180, ct = Math.cos(th), st = Math.sin(th);
+  const col = { left: css("--left"), right: css("--right"), spine: css("--spine"), floor: css("--floor") };
+  for (const c of cells) {
+    const cv = c.canvas, ctx = cv.getContext("2d"), n = c.clip.n, f = Math.floor(t * c.clip.fps) % n, X = c.clip.x;
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height);
+    const sc = Math.min(cv.width / 1.9, cv.height / 2.35);
+    ctx.setTransform(sc, 0, 0, -sc, cv.width / 2, cv.height - 0.12 * sc);
+    ctx.strokeStyle = col.floor; ctx.lineWidth = 0.02; ctx.beginPath(); ctx.moveTo(-0.85, 0); ctx.lineTo(0.85, 0); ctx.stroke();
+    const pt = k => { const i = (f * DATA.keys.length + K[k]) * 3; const x = X[i], y = X[i + 1], z = X[i + 2]; return [x * ct + z * st, y]; };
+    ctx.lineCap = "round";
+    for (const [side, cc] of [["left", col.left], ["right", col.right], ["spine", col.spine]]) {
+      ctx.strokeStyle = cc; ctx.lineWidth = 0.055;
+      for (const [a, b] of BONES[side]) { const A = pt(a), B = pt(b); ctx.beginPath(); ctx.moveTo(...A); ctx.lineTo(...B); ctx.stroke(); }
+    }
+    const H = pt("head"); ctx.fillStyle = col.spine; ctx.beginPath(); ctx.arc(H[0], H[1], 0.11, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+let clock = 0, prev = null;
+function tick(now) { if (prev !== null && state.playing) clock += (now - prev) / 1000 * state.speed; prev = now; draw(clock); requestAnimationFrame(tick); }
+
+document.querySelectorAll("#viewSeg button").forEach(b => b.addEventListener("click", () => {
+  state.view = Number(b.dataset.v);
+  document.querySelectorAll("#viewSeg button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+}));
+const play = document.getElementById("playBtn");
+const setPlay = () => { play.textContent = state.playing ? "일시정지" : "재생"; play.setAttribute("aria-pressed", String(state.playing)); };
+play.addEventListener("click", () => { state.playing = !state.playing; setPlay(); }); setPlay();
+document.getElementById("speedBtn").addEventListener("click", e => { state.speed = state.speed === 1 ? 0.5 : 1; e.currentTarget.setAttribute("aria-pressed", String(state.speed === 0.5)); });
+
+document.querySelectorAll("#modeSeg button").forEach(b => b.addEventListener("click", () => {
+  state.mode = b.dataset.m;
+  document.querySelectorAll("#modeSeg button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  summary(); buildPeople(); build();
+}));
+summary(); buildPeople(); build(); requestAnimationFrame(tick);
+</script>
