@@ -20,9 +20,13 @@ SMPL/
 .agents/
 .env
 google-cloud-cli-darwin-arm.tar.gz
-data/raw/
-data/consent/id_mapping.csv
-data/metadata/segment_review/*.png
-data/metadata/segment_review/*_segments.csv
 icc_features*.npz
 reports/wst_pilot_cache.pkl
+reports/wst_kaist_cache.pkl
+# data/ 전체 제외(참가자 영상·메타데이터) — 단 segment_review의 파이썬 스크립트(코드)만 추적
+data/*
+!data/metadata/
+data/metadata/*
+!data/metadata/segment_review/
+data/metadata/segment_review/*
+!data/metadata/segment_review/*.py
