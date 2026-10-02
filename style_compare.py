@@ -21,6 +21,7 @@ motion_puzzle conda env에서 실행 (Animation/BVH 모듈이 옛 numpy 필요):
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -37,8 +38,10 @@ from Quaternions import Quaternions  # noqa: E402
 import BVH  # noqa: E402
 import retarget_smpl_to_cmu as R  # noqa: E402
 
-MP3D = ROOT / "reports" / "mp3d"
-OUT = ROOT / "reports" / "style_compare"
+# POSE_SRC=gvhmr 이면 참가자 3D를 GVHMR/FootMR(gvhmr_to_npz.py)에서 읽고 결과도 따로 둔다
+SRC = os.environ.get("POSE_SRC", "mp3d")
+MP3D = ROOT / "reports" / SRC
+OUT = ROOT / "reports" / ("style_compare" if SRC == "mp3d" else f"style_compare_{SRC}")
 MPZ = ROOT / "external" / "motion_puzzle"
 CONTENT = {"walk": MPZ / "datasets" / "cmu" / "test_bvh" / "35_06.bvh"}
 PEOPLE = "P001,P002,P003,P004,P006,P007,P008,P010,P011,P012,P013,P014".split(",")
@@ -143,8 +146,10 @@ def ik(pts: dict, root_units: np.ndarray) -> Animation:
 
 
 def mp_points(npz: Path, d0: float = 5.0):
-    """MediaPipe world → CMU 축 관절 위치(미터) + 루트 경로(미터)."""
+    """MediaPipe world(또는 GVHMR 관절) → CMU 축 관절 위치(미터) + 루트 경로(미터)."""
     d = np.load(npz)
+    if "joints" in d:
+        return gvhmr_points(d)
     W = d["world"].copy()
     W[..., 1] *= -1
     W[..., 2] *= -1
@@ -162,6 +167,20 @@ def mp_points(npz: Path, d0: float = 5.0):
     root = np.stack([(hip[:, 0] - hip[0, 0]) * m_per, -(hip[:, 1] - hip[:, 1].mean()) * m_per,
                      d0 * (1 - np.median(tor) / tor)], axis=1)
     root = savgol_filter(root, min(15, len(root) // 2 * 2 - 1), 2, axis=0)
+    return pts, root, float(d["fps"])
+
+
+def gvhmr_points(d):
+    """gvhmr_to_npz.py 결과(SMPL-X 22관절, 월드 Y 위) → mp_points와 같은 꼴. 골반 중심은 MediaPipe처럼 두 엉덩이 중점."""
+    P = d["joints"]
+    pel = (P[:, 1] + P[:, 2]) / 2
+    idx = {"Lhip": 1, "Rhip": 2, "Lknee": 4, "Rknee": 5, "Lank": 7, "Rank": 8, "Ltoe": 10, "Rtoe": 11,
+           "Lsh": 16, "Rsh": 17, "Lel": 18, "Rel": 19, "Lwr": 20, "Rwr": 21, "head": 15}
+    pts = {k: P[:, v] - pel for k, v in idx.items()}
+    pts["pelvis"], pts["neck"] = np.zeros_like(pel), (pts["Lsh"] + pts["Rsh"]) / 2
+    for s in "LR":  # ponytail: SMPL-X 몸 파라미터엔 손가락이 없어 손은 아래팔을 곧게 이은 것으로 둔다
+        pts[s + "idx"] = pts[s + "wr"] + 0.4 * (pts[s + "wr"] - pts[s + "el"])
+    root = pel - np.array([pel[0, 0], pel[:, 1].mean(), pel[0, 2]])
     return pts, root, float(d["fps"])
 
 
@@ -394,7 +413,7 @@ def _treadmill_torso() -> float:
 
 def openpose_dir(npz: Path, dst: Path) -> Path:
     """MediaPipe 2D(프레임 대각선 정규화) → OpenPose BODY_25 JSON 폴더. 학습 데이터(트레드밀 영상)와 몸통 크기를 맞추고 30fps로."""
-    d = np.load(npz)
+    d = np.load(ROOT / "reports" / "mp3d" / npz.name)  # Aberman 2D 입력은 언제나 MediaPipe 2D
     xy = d["xy"] * np.hypot(1920, 1080)
     step = max(1, int(round(float(d["fps"]) / 30)))
     xy = xy[::step]

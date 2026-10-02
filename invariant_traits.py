@@ -104,7 +104,7 @@ def main() -> None:
             hit = float(np.mean([np.argmin(((A - Bz[j]) ** 2).sum(1)) == i for j, (i, _) in enumerate(Bt)]))
             rep["cross_id"][f"{a}->{b}:{name}"] = {"n": len(ppl), "acc": hit}
             print(f"  {MOTIONS[a]}→{MOTIONS[b]}(n={len(ppl)}) {name}: {hit:.0%} (우연 {1 / len(ppl):.0%})")
-    (S.ROOT / "reports" / "invariant_traits.json").write_text(json.dumps(rep, ensure_ascii=False, indent=1))
+    (S.ROOT / "reports" / ("invariant_traits.json" if S.SRC == "mp3d" else f"invariant_traits_{S.SRC}.json")).write_text(json.dumps(rep, ensure_ascii=False, indent=1))
 
 
 if __name__ == "__main__":
